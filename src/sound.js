@@ -1,0 +1,69 @@
+// Alle Geräusche werden mit WebAudio direkt im Code erzeugt — keine Audiodateien nötig.
+// Browser erlauben Ton erst nach der ersten Nutzereingabe, deshalb wird der
+// AudioContext beim ersten Tastendruck angelegt.
+
+let audio = null;
+
+window.addEventListener('keydown', () => {
+  if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+  if (audio.state === 'suspended') audio.resume();
+});
+
+// Ein Ton, der von einer Frequenz zu einer anderen gleitet und ausklingt
+function ton(freqStart, freqEnde, dauer, typ = 'sine', lautstaerke = 0.3) {
+  if (!audio) return;
+  const t = audio.currentTime;
+  const osc = audio.createOscillator();
+  const gain = audio.createGain();
+  osc.type = typ;
+  osc.frequency.setValueAtTime(freqStart, t);
+  osc.frequency.exponentialRampToValueAtTime(Math.max(1, freqEnde), t + dauer);
+  gain.gain.setValueAtTime(lautstaerke, t);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + dauer);
+  osc.connect(gain).connect(audio.destination);
+  osc.start(t);
+  osc.stop(t + dauer);
+}
+
+// Kurzes gefiltertes Rauschen (für "Luft"- und Aufprall-Geräusche)
+function rauschen(dauer, filterFrequenz, lautstaerke = 0.25) {
+  if (!audio) return;
+  const t = audio.currentTime;
+  const puffer = audio.createBuffer(1, Math.ceil(audio.sampleRate * dauer), audio.sampleRate);
+  const daten = puffer.getChannelData(0);
+  for (let i = 0; i < daten.length; i++) daten[i] = Math.random() * 2 - 1;
+
+  const quelle = audio.createBufferSource();
+  quelle.buffer = puffer;
+  const filter = audio.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.value = filterFrequenz;
+  const gain = audio.createGain();
+  gain.gain.setValueAtTime(lautstaerke, t);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + dauer);
+  quelle.connect(filter).connect(gain).connect(audio.destination);
+  quelle.start(t);
+}
+
+export function spieleSchwung() {
+  rauschen(0.09, 900, 0.12);
+}
+
+export function spieleTreffer() {
+  ton(160, 55, 0.14, 'sine', 0.5);   // dumpfer Aufprall
+  rauschen(0.06, 400, 0.2);
+}
+
+export function spieleBlock() {
+  ton(850, 620, 0.08, 'square', 0.1); // kurzes metallisches "Klack"
+}
+
+export function spieleKo() {
+  ton(110, 28, 0.6, 'sine', 0.6);     // tiefer Wumms
+  rauschen(0.25, 200, 0.3);
+}
+
+export function spieleGong() {
+  ton(440, 430, 0.9, 'triangle', 0.25);
+  ton(662, 650, 0.7, 'triangle', 0.12); // leicht verstimmte Oberton-Schwebung
+}

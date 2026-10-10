@@ -1,12 +1,14 @@
 import { CONFIG } from './config.js';
 import { istGedrueckt, verbraucheFrisch, tickEnde } from './input.js';
 import { Kaempfer } from './fighter.js';
+import { CHARAKTERE, GEGNER_PFAD } from './characters.js';
 import { kiEingabe, leereEingabe } from './ai.js';
 import { wendePhysikAn, trenneKaempfer } from './physics.js';
 import { verarbeiteKampf } from './combat.js';
 import { zeichneStage, zeichneVordergrund } from './stage.js';
 import { zeichneUI } from './ui.js';
 import { spawnTrefferFunken, updatePartikel, zeichnePartikel, leerePartikel } from './particles.js';
+import { spieleTreffer, spieleBlock, spieleKo, spieleGong } from './sound.js';
 
 const canvas = document.getElementById('spiel');
 const ctx = canvas.getContext('2d');
@@ -14,19 +16,26 @@ const ctx = canvas.getContext('2d');
 const START_X_SPIELER = 320;
 const START_X_GEGNER = 640;
 
+let gegnerIndex = 0; // Position auf dem Schattenpfad (bleibt über Kämpfe erhalten)
 let spiel;
 const kamera = { x: 0, shake: 0 };
 
-function neustart() {
+function neuerKampf() {
+  const gegnerDaten = CHARAKTERE[GEGNER_PFAD[gegnerIndex]];
+  const naechsterName = GEGNER_PFAD[gegnerIndex + 1] ? CHARAKTERE[GEGNER_PFAD[gegnerIndex + 1]].name : null;
   spiel = {
-    spieler: new Kaempfer('Juro', START_X_SPIELER, 1),
-    gegner: new Kaempfer('Scharr', START_X_GEGNER, -1),
+    spieler: new Kaempfer(CHARAKTERE.juro, START_X_SPIELER, 1),
+    gegner: new Kaempfer(gegnerDaten, START_X_GEGNER, -1),
     runde: 1,
-    phase: 'intro', // intro → kampf → rundenEnde → (intro | matchEnde)
+    phase: 'intro', // intro → kampf → rundenEnde → (intro | matchEnde) → (neuer Kampf | pfadEnde)
     phasenZeit: 0,
     hitstop: 0,
     rundenSieger: null,
     matchSieger: null,
+    spielerHatGewonnen: false,
+    kampfNummer: gegnerIndex + 1,
+    kampfAnzahl: GEGNER_PFAD.length,
+    naechsterGegner: naechsterName,
   };
   kamera.x = 0;
   kamera.shake = 0;
@@ -56,7 +65,9 @@ function spielerEingabe() {
 
 function update(dt) {
   if (verbraucheFrisch('KeyR')) {
-    neustart();
+    // Nach dem Pfad-Ende beginnt der ganze Pfad von vorn, sonst nur der aktuelle Kampf
+    if (spiel.phase === 'pfadEnde') gegnerIndex = 0;
+    neuerKampf();
     tickEnde();
     return;
   }
@@ -93,6 +104,7 @@ function update(dt) {
     if (spiel.phasenZeit >= CONFIG.runden.introDauer) {
       spiel.phase = 'kampf';
       spiel.phasenZeit = 0;
+      spieleGong();
     }
   } else if (kampfAktiv) {
     const ereignisse = verarbeiteKampf(spieler, gegner);
@@ -100,6 +112,9 @@ function update(dt) {
       spawnTrefferFunken(e.x, e.y, e.richtung, e.blockt, e.ko);
       spiel.hitstop = e.ko ? G.hitstopKo : e.blockt ? G.hitstopBlock : G.hitstopTreffer;
       kamera.shake = Math.max(kamera.shake, e.ko ? G.shakeKo : e.blockt ? G.shakeBlock : G.shakeTreffer);
+      if (e.ko) spieleKo();
+      else if (e.blockt) spieleBlock();
+      else spieleTreffer();
     }
 
     if (!spieler.lebt() || !gegner.lebt()) {
@@ -117,12 +132,26 @@ function update(dt) {
         gegner.rundenSiege >= noetig ? gegner : null;
       if (matchSieger) {
         spiel.matchSieger = matchSieger.name;
+        spiel.spielerHatGewonnen = matchSieger === spieler;
         spiel.phase = 'matchEnde';
         spiel.phasenZeit = 0;
+        spieleGong();
       } else {
         naechsteRunde();
       }
     }
+  } else if (spiel.phase === 'matchEnde') {
+    // Gewonnen → nach kurzer Pause automatisch zum nächsten Gegner auf dem Pfad
+    if (spiel.spielerHatGewonnen && spiel.phasenZeit >= 3) {
+      if (gegnerIndex < GEGNER_PFAD.length - 1) {
+        gegnerIndex++;
+        neuerKampf();
+      } else {
+        spiel.phase = 'pfadEnde';
+        spiel.phasenZeit = 0;
+      }
+    }
+    // Verloren → warten auf R (Revanche)
   }
 
   tickEnde();
@@ -171,5 +200,5 @@ function schleife(jetzt) {
   requestAnimationFrame(schleife);
 }
 
-neustart();
+neuerKampf();
 requestAnimationFrame(schleife);

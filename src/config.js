@@ -45,6 +45,17 @@ export const CONFIG = {
     blockRueckstossFaktor: 0.4,
   },
 
+  // Waffen verstärken nur den Arm-Angriff (Schlag wird zum Hieb)
+  waffen: {
+    schwert: { laenge: 55, reichweiteBonus: 45, schadenBonus: 4 },
+    stab:    { laenge: 95, reichweiteBonus: 55, schadenBonus: 2 },
+  },
+
+  kombo: {
+    maxKette: 3,        // höchstens 3 Angriffe hintereinander
+    fensterNach: 0.05,  // so lange nach dem Treffer-Fenster darf verkettet werden
+  },
+
   // Spielgefühl: kurzes Einfrieren bei Treffern (Hitstop) und Kamerawackeln
   gefuehl: {
     hitstopTreffer: 0.07,

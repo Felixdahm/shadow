@@ -10,7 +10,7 @@ function lebensbalken(ctx, x, y, kaempfer, gespiegelt) {
   ctx.fillStyle = '#541c2a';
   ctx.fillRect(x, y, BALKEN_BREITE, BALKEN_HOEHE);
 
-  const maxHp = CONFIG.kaempfer.maxHp;
+  const maxHp = kaempfer.maxHp;
 
   // Nachlauf-Balken: zeigt hell, wie viel gerade abgezogen wurde
   const geisterBreite = BALKEN_BREITE * (kaempfer.anzeigeHp / maxHp);
@@ -63,6 +63,12 @@ export function zeichneUI(ctx, spiel) {
   lebensbalken(ctx, 40, 28, spiel.spieler, false);
   lebensbalken(ctx, breite - 40 - BALKEN_BREITE, 28, spiel.gegner, true);
 
+  // Fortschritt auf dem Schattenpfad
+  ctx.fillStyle = 'rgba(243, 233, 247, 0.75)';
+  ctx.font = 'bold 15px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(`Kampf ${spiel.kampfNummer} von ${spiel.kampfAnzahl}`, breite / 2, 42);
+
   if (spiel.phase === 'intro') {
     if (spiel.phasenZeit < 0.85) {
       ansage(ctx, `RUNDE ${spiel.runde}`, 64, spiel.phasenZeit);
@@ -74,7 +80,16 @@ export function zeichneUI(ctx, spiel) {
     untertitel(ctx, `${spiel.rundenSieger} holt die Runde`);
   } else if (spiel.phase === 'matchEnde') {
     ansage(ctx, `${spiel.matchSieger.toUpperCase()} GEWINNT`, 56, spiel.phasenZeit);
-    untertitel(ctx, 'R für Neustart');
+    if (spiel.spielerHatGewonnen && spiel.naechsterGegner) {
+      untertitel(ctx, `Nächster Gegner: ${spiel.naechsterGegner}`);
+    } else if (spiel.spielerHatGewonnen) {
+      untertitel(ctx, 'Der Pfad ist fast zu Ende …');
+    } else {
+      untertitel(ctx, 'R für Revanche');
+    }
+  } else if (spiel.phase === 'pfadEnde') {
+    ansage(ctx, 'PFAD BEZWUNGEN', 60, spiel.phasenZeit);
+    untertitel(ctx, 'Juro hat den Schattenpfad gemeistert — R für einen neuen Durchlauf');
   }
 
   ctx.textAlign = 'left';

@@ -1,11 +1,12 @@
 import { CONFIG } from './config.js';
+import { KI_STILE } from './characters.js';
 
 export function leereEingabe() {
   return { links: false, rechts: false, springen: false, ducken: false, schlag: false, tritt: false, block: false };
 }
 
-// Einfache Gegner-KI: entscheidet alle 0,2–0,45 s neu.
-// Weit weg → hinlaufen. Nah dran → zufällig schlagen, treten, blocken oder ausweichen.
+// Gegner-KI: entscheidet alle 0,2–0,45 s neu. Der KI-Stil des Charakters
+// (ausgewogen / aggressiv / defensiv) bestimmt die Wahrscheinlichkeiten.
 export function kiEingabe(ich, gegner, dt) {
   const g = ich.kiGedaechtnis;
   if (!g.eingabe) g.eingabe = leereEingabe();
@@ -19,6 +20,7 @@ export function kiEingabe(ich, gegner, dt) {
   if (g.timer > 0) return g.eingabe;
 
   const K = CONFIG.ki;
+  const stil = KI_STILE[ich.charakter.kiStil] ?? KI_STILE.ausgewogen;
   g.timer = K.denkIntervallMin + Math.random() * (K.denkIntervallMax - K.denkIntervallMin);
 
   const e = leereEingabe();
@@ -29,9 +31,9 @@ export function kiEingabe(ich, gegner, dt) {
   const gegnerIstRechts = gegner.x > ich.x;
   const wuerfel = Math.random();
 
-  // Reaktion: Wenn der Gegner gerade angreift, oft blocken
+  // Reaktion: Wenn der Gegner gerade angreift, je nach Stil blocken
   const gegnerGreiftAn = gegner.zustand === 'schlag' || gegner.zustand === 'tritt';
-  if (gegnerGreiftAn && abstand < K.angriffsAbstand + 30 && wuerfel < 0.45) {
+  if (gegnerGreiftAn && abstand < K.angriffsAbstand + 40 && wuerfel < stil.blockNeigung) {
     e.block = true;
     return e;
   }
@@ -40,10 +42,15 @@ export function kiEingabe(ich, gegner, dt) {
     if (wuerfel < 0.8) e[gegnerIstRechts ? 'rechts' : 'links'] = true;
     // sonst: kurz stehen bleiben (wirkt menschlicher)
   } else {
-    if (wuerfel < 0.32) e.schlag = true;
-    else if (wuerfel < 0.55) e.tritt = true;
-    else if (wuerfel < 0.7) e.block = true;
-    else if (wuerfel < 0.85) e[gegnerIstRechts ? 'links' : 'rechts'] = true; // Abstand aufbauen
+    if (wuerfel < stil.angriffsLust) {
+      // Bewaffnete schlagen lieber (mehr Reichweite), Unbewaffnete treten öfter
+      if (Math.random() < (ich.waffenDaten ? 0.65 : 0.5)) e.schlag = true;
+      else e.tritt = true;
+    } else if (wuerfel < stil.angriffsLust + stil.blockNeigung * 0.3) {
+      e.block = true;
+    } else if (wuerfel < stil.angriffsLust + stil.blockNeigung * 0.3 + stil.rueckzug) {
+      e[gegnerIstRechts ? 'links' : 'rechts'] = true; // Abstand aufbauen
+    }
     // sonst: nichts tun
   }
   return e;

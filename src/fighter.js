@@ -1,22 +1,31 @@
 import { CONFIG } from './config.js';
 import { poseZumZeitpunkt } from './animations.js';
 import { zeichneSkelett } from './skeleton.js';
+import { spieleSchwung } from './sound.js';
 
 export class Kaempfer {
-  constructor(name, x, blick) {
-    this.name = name;
+  constructor(charakter, x, blick) {
+    this.charakter = charakter;
+    this.name = charakter.name;
+    this.skalierung = charakter.skalierung;
+    this.maxHp = Math.round(CONFIG.kaempfer.maxHp * charakter.hpFaktor);
+    this.tempo = CONFIG.kaempfer.laufTempo * charakter.tempoFaktor;
+    this.waffenDaten = charakter.waffe ? CONFIG.waffen[charakter.waffe] : null;
+
     this.x = x;
     this.y = CONFIG.physik.bodenY; // y = Fußposition
     this.vx = 0;
     this.vy = 0;
     this.blick = blick; // +1 schaut nach rechts, -1 nach links
-    this.hp = CONFIG.kaempfer.maxHp;
+    this.hp = this.maxHp;
     this.anzeigeHp = this.hp; // läuft dem echten HP-Wert hinterher (Balken-Nachlauf)
     this.rundenSiege = 0;
     this.zustand = 'stehen';
     this.zustandZeit = 0;
     this.hatGetroffen = false; // jeder Angriff trifft höchstens einmal
     this.rueckstoss = 0;       // Rückstoß-Geschwindigkeit nach einem Treffer
+    this.kombo = 0;            // Position in der Angriffskette
+    this.puffer = null;        // vorgemerkter Folgeangriff (Kombo)
     this.kiGedaechtnis = { timer: 0, eingabe: null };
   }
 
@@ -28,10 +37,20 @@ export class Kaempfer {
     return this.zustand !== 'ko';
   }
 
+  istAngriff() {
+    return this.zustand === 'schlag' || this.zustand === 'tritt';
+  }
+
   wechsle(zustand) {
     this.zustand = zustand;
     this.zustandZeit = 0;
     this.hatGetroffen = false;
+    if (zustand === 'schlag' || zustand === 'tritt') {
+      spieleSchwung();
+    } else {
+      this.kombo = 0;
+      this.puffer = null;
+    }
   }
 
   // Setzt alles für eine neue Runde zurück (Siege bleiben erhalten)
@@ -41,15 +60,16 @@ export class Kaempfer {
     this.vx = 0;
     this.vy = 0;
     this.blick = blick;
-    this.hp = CONFIG.kaempfer.maxHp;
+    this.hp = this.maxHp;
     this.anzeigeHp = this.hp;
     this.rueckstoss = 0;
     this.wechsle('stehen');
   }
 
   update(dt, eingabe, gegner) {
-    this.zustandZeit += dt;
-    const K = CONFIG.kaempfer;
+    // Schnelle Charaktere führen auch ihre Angriffe schneller aus:
+    // die Angriffs-Uhr läuft mit tempoFaktor, Animation und Treffer-Fenster bleiben synchron.
+    this.zustandZeit += dt * (this.istAngriff() ? this.charakter.tempoFaktor : 1);
 
     // Der Anzeige-Balken gleitet dem echten HP-Stand hinterher
     this.anzeigeHp += (this.hp - this.anzeigeHp) * Math.min(1, 5 * dt);
@@ -70,15 +90,35 @@ export class Kaempfer {
       return;
     }
 
-    if (this.zustand === 'schlag' || this.zustand === 'tritt') {
+    if (this.istAngriff()) {
       this.vx = 0;
-      if (this.zustandZeit >= CONFIG.angriffe[this.zustand].dauer) this.wechsle('stehen');
+      const A = CONFIG.angriffe[this.zustand];
+
+      // Kombo: Während des Angriffs gedrückte Tasten werden gepuffert …
+      if (eingabe.schlag) this.puffer = 'schlag';
+      if (eingabe.tritt) this.puffer = 'tritt';
+
+      // … und nach dem Treffer-Fenster darf direkt der nächste Angriff starten
+      const kettenFenster = A.aktivBis + CONFIG.kombo.fensterNach;
+      if (this.puffer && this.kombo < CONFIG.kombo.maxKette - 1 && this.zustandZeit >= kettenFenster) {
+        this.kombo++;
+        const naechster = this.puffer;
+        this.puffer = null;
+        this.wechsle(naechster);
+        return;
+      }
+
+      if (this.zustandZeit >= A.dauer) {
+        this.kombo = 0;
+        this.puffer = null;
+        this.wechsle('stehen');
+      }
       return;
     }
 
     if (this.zustand === 'springen') {
       // In der Luft lässt sich die Richtung noch leicht steuern
-      this.vx = ((eingabe.rechts ? 1 : 0) - (eingabe.links ? 1 : 0)) * K.laufTempo * 0.8;
+      this.vx = ((eingabe.rechts ? 1 : 0) - (eingabe.links ? 1 : 0)) * this.tempo * 0.8;
       if (this.amBoden() && this.vy >= 0) this.wechsle('stehen');
       return;
     }
@@ -92,14 +132,14 @@ export class Kaempfer {
     } else if (eingabe.tritt) {
       this.wechsle('tritt');
     } else if (eingabe.springen) {
-      this.vy = -K.sprungKraft;
+      this.vy = -CONFIG.kaempfer.sprungKraft;
       this.wechsle('springen');
     } else if (eingabe.block) {
       if (this.zustand !== 'block') this.wechsle('block');
     } else if (eingabe.ducken) {
       if (this.zustand !== 'ducken') this.wechsle('ducken');
     } else if (eingabe.links || eingabe.rechts) {
-      this.vx = (eingabe.rechts ? 1 : -1) * K.laufTempo;
+      this.vx = (eingabe.rechts ? 1 : -1) * this.tempo;
       if (this.zustand !== 'laufen') this.wechsle('laufen');
     } else if (this.zustand !== 'stehen') {
       this.wechsle('stehen');
@@ -110,12 +150,17 @@ export class Kaempfer {
     // Bodenschatten, damit die Figur nicht "schwebt"
     ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
     ctx.beginPath();
-    ctx.ellipse(this.x, CONFIG.physik.bodenY + 8, 42, 9, 0, 0, Math.PI * 2);
+    ctx.ellipse(this.x, CONFIG.physik.bodenY + 8, 42 * this.skalierung, 9, 0, 0, Math.PI * 2);
     ctx.fill();
 
     const pose = poseZumZeitpunkt(this.zustand, this.zustandZeit);
     // Hit-Flash: direkt nach einem Treffer färbt sich die Silhouette kurz dunkelrot
     const flash = this.zustand === 'treffer' && this.zustandZeit < 0.12 ? '#6b1626' : null;
-    zeichneSkelett(ctx, this.x, this.y, this.blick, pose, flash);
+    zeichneSkelett(ctx, this.x, this.y, this.blick, pose, {
+      einfaerbung: flash,
+      skalierung: this.skalierung,
+      waffe: this.charakter.waffe,
+      extras: this.charakter.extras,
+    });
   }
 }
