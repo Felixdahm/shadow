@@ -16,6 +16,9 @@ export function wendePhysikAn(k, dt) {
 // Verhindert, dass die Kämpfer ineinander stehen: beide werden sanft auseinandergeschoben.
 export function trenneKaempfer(a, b) {
   if (!a.lebt() || !b.lebt()) return;
+  // Sobald einer in der Luft ist, darf man über- und durcheinander hinweg —
+  // so kann man wie in Shadow Fight über den Gegner springen und die Seite wechseln.
+  if (!a.amBoden() || !b.amBoden()) return;
   const P = CONFIG.physik;
   const abstand = b.x - a.x;
   if (Math.abs(abstand) >= P.minAbstand) return;

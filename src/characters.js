@@ -24,6 +24,7 @@ export const CHARAKTERE = {
     extras: [],
     kiStil: 'ausgewogen',
     arena: 'aschenpass',
+    beschreibung: 'Wächter des Aschenpasses · unbewaffnet · ausgewogen',
   },
   veyra: {
     name: 'Veyra',
@@ -35,6 +36,7 @@ export const CHARAKTERE = {
     extras: ['zopf'],
     kiStil: 'aggressiv',
     arena: 'mondhain',
+    beschreibung: 'Stabkämpferin des Mondhains · schnell, aber zerbrechlich',
   },
   dorn: {
     name: 'Dorn',
@@ -46,11 +48,20 @@ export const CHARAKTERE = {
     extras: ['kapuze'],
     kiStil: 'defensiv',
     arena: 'nebelschlucht',
+    beschreibung: 'Herr der Nebelschlucht · langsam, blockt viel, trifft brutal',
   },
 };
 
 // Die Gegner-Reihenfolge auf dem Schattenpfad
 export const GEGNER_PFAD = ['scharr', 'veyra', 'dorn'];
+
+// Story-Texte vor jedem Kampf (Story-Modus)
+export const STORY = {
+  scharr: 'Juro verlässt sein Dorf mit nichts als dem Schwert seines Vaters. Am Aschenpass versperrt ihm Scharr den Weg — ein Wächter, der niemanden ohne Kampf passieren lässt.',
+  veyra: 'Hinter dem Pass beginnt der Mondhain. Zwischen den Bäumen wartet Veyra, die flinke Stabkämpferin. Sie kämpft nicht aus Zorn — sie will sehen, ob Juro würdig ist.',
+  dorn: 'Am Ende des Pfads liegt die Nebelschlucht. Dort herrscht Dorn, der gepanzerte Schatten. Wer ihn bezwingt, hat den Schattenpfad gemeistert.',
+  ende: 'Der Nebel lichtet sich. Juro hat den Schattenpfad bezwungen — doch jenseits der Schlucht warten schon neue Schatten.',
+};
 
 // KI-Persönlichkeiten: Wahrscheinlichkeiten für Angriff, Block und Rückzug
 export const KI_STILE = {

@@ -91,8 +91,9 @@ export class Kaempfer {
     }
 
     if (this.istAngriff()) {
-      this.vx = 0;
       const A = CONFIG.angriffe[this.zustand];
+      // Leichter Ausfallschritt nach vorn macht Angriffe druckvoller
+      this.vx = this.zustandZeit < A.aktivBis ? this.blick * 90 : 0;
 
       // Kombo: Während des Angriffs gedrückte Tasten werden gepuffert …
       if (eingabe.schlag) this.puffer = 'schlag';
@@ -117,8 +118,8 @@ export class Kaempfer {
     }
 
     if (this.zustand === 'springen') {
-      // In der Luft lässt sich die Richtung noch leicht steuern
-      this.vx = ((eingabe.rechts ? 1 : 0) - (eingabe.links ? 1 : 0)) * this.tempo * 0.8;
+      // In der Luft volle Steuerung — so springt man über den Gegner hinweg
+      this.vx = ((eingabe.rechts ? 1 : 0) - (eingabe.links ? 1 : 0)) * this.tempo;
       if (this.amBoden() && this.vy >= 0) this.wechsle('stehen');
       return;
     }

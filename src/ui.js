@@ -1,4 +1,6 @@
 import { CONFIG } from './config.js';
+import { zeichneSkelett } from './skeleton.js';
+import { poseZumZeitpunkt } from './animations.js';
 
 const BALKEN_BREITE = 340;
 const BALKEN_HOEHE = 20;
@@ -80,17 +82,123 @@ export function zeichneUI(ctx, spiel) {
     untertitel(ctx, `${spiel.rundenSieger} holt die Runde`);
   } else if (spiel.phase === 'matchEnde') {
     ansage(ctx, `${spiel.matchSieger.toUpperCase()} GEWINNT`, 56, spiel.phasenZeit);
-    if (spiel.spielerHatGewonnen && spiel.naechsterGegner) {
-      untertitel(ctx, `Nächster Gegner: ${spiel.naechsterGegner}`);
-    } else if (spiel.spielerHatGewonnen) {
-      untertitel(ctx, 'Der Pfad ist fast zu Ende …');
+    if (spiel.storyModus && spiel.spielerHatGewonnen && spiel.naechsterGegner) {
+      untertitel(ctx, `Der Pfad führt weiter … (${spiel.naechsterGegner} wartet)`);
+    } else if (spiel.storyModus && spiel.spielerHatGewonnen) {
+      untertitel(ctx, 'Das Ende des Pfads ist nah …');
     } else {
-      untertitel(ctx, 'R für Revanche');
+      untertitel(ctx, 'R für Revanche · Esc für das Menü');
     }
   } else if (spiel.phase === 'pfadEnde') {
     ansage(ctx, 'PFAD BEZWUNGEN', 60, spiel.phasenZeit);
-    untertitel(ctx, 'Juro hat den Schattenpfad gemeistert — R für einen neuen Durchlauf');
+    untertitel(ctx, 'Enter für das Menü');
   }
 
+  ctx.textAlign = 'left';
+}
+
+// ---------- Menü-Bildschirme ----------
+
+// Dunkler Schleier über der Arena, damit Text gut lesbar ist
+function schleier(ctx, alpha = 0.55) {
+  ctx.fillStyle = `rgba(5, 4, 12, ${alpha})`;
+  ctx.fillRect(0, 0, CONFIG.canvas.breite, CONFIG.canvas.hoehe);
+}
+
+// Mehrzeiliger Text mit Umbruch an der maximalen Breite
+function textBlock(ctx, text, y, maxBreite, zeilenHoehe) {
+  const mitte = CONFIG.canvas.breite / 2;
+  const woerter = text.split(' ');
+  let zeile = '';
+  for (const wort of woerter) {
+    const test = zeile ? `${zeile} ${wort}` : wort;
+    if (ctx.measureText(test).width > maxBreite && zeile) {
+      ctx.fillText(zeile, mitte, y);
+      zeile = wort;
+      y += zeilenHoehe;
+    } else {
+      zeile = test;
+    }
+  }
+  if (zeile) ctx.fillText(zeile, mitte, y);
+  return y;
+}
+
+export function zeichneMenue(ctx, auswahl, zeit) {
+  const mitte = CONFIG.canvas.breite / 2;
+  schleier(ctx, 0.45);
+
+  // Titel "atmet" ganz leicht
+  const skala = 1 + 0.015 * Math.sin(zeit * 1.5);
+  ctx.save();
+  ctx.translate(mitte, 170);
+  ctx.scale(skala, skala);
+  ctx.fillStyle = 'rgba(255, 235, 200, 0.97)';
+  ctx.font = 'bold 76px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('SCHATTENPFAD', 0, 0);
+  ctx.restore();
+
+  const eintraege = ['Story-Modus', 'Freier Kampf'];
+  ctx.textAlign = 'center';
+  eintraege.forEach((eintrag, i) => {
+    const gewaehlt = i === auswahl;
+    ctx.fillStyle = gewaehlt ? '#ffd27d' : 'rgba(243, 233, 247, 0.75)';
+    ctx.font = gewaehlt ? 'bold 34px system-ui, sans-serif' : '30px system-ui, sans-serif';
+    ctx.fillText(gewaehlt ? `▸ ${eintrag} ◂` : eintrag, mitte, 300 + i * 58);
+  });
+
+  ctx.fillStyle = 'rgba(243, 233, 247, 0.55)';
+  ctx.font = '17px system-ui, sans-serif';
+  ctx.fillText('↑ ↓ wählen · Enter bestätigen', mitte, 480);
+  ctx.textAlign = 'left';
+}
+
+export function zeichneStory(ctx, text) {
+  const mitte = CONFIG.canvas.breite / 2;
+  schleier(ctx, 0.68);
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(255, 235, 200, 0.95)';
+  ctx.font = 'bold 30px system-ui, sans-serif';
+  ctx.fillText('DER SCHATTENPFAD', mitte, 150);
+
+  ctx.fillStyle = 'rgba(243, 233, 247, 0.92)';
+  ctx.font = '22px system-ui, sans-serif';
+  textBlock(ctx, text, 230, 640, 36);
+
+  ctx.fillStyle = 'rgba(243, 233, 247, 0.55)';
+  ctx.font = '17px system-ui, sans-serif';
+  ctx.fillText('Enter — weiter', mitte, 470);
+  ctx.textAlign = 'left';
+}
+
+export function zeichneGegnerWahl(ctx, charakter, zeit) {
+  const mitte = CONFIG.canvas.breite / 2;
+  schleier(ctx, 0.35);
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(255, 235, 200, 0.95)';
+  ctx.font = 'bold 34px system-ui, sans-serif';
+  ctx.fillText('FREIER KAMPF', mitte, 110);
+
+  // Der gewählte Gegner steht atmend in seiner eigenen Arena
+  const pose = poseZumZeitpunkt('stehen', zeit);
+  zeichneSkelett(ctx, mitte, CONFIG.physik.bodenY, -1, pose, {
+    skalierung: charakter.skalierung,
+    waffe: charakter.waffe,
+    extras: charakter.extras,
+  });
+
+  ctx.fillStyle = '#ffd27d';
+  ctx.font = 'bold 30px system-ui, sans-serif';
+  ctx.fillText(`◂  ${charakter.name}  ▸`, mitte, 180);
+  ctx.fillStyle = 'rgba(243, 233, 247, 0.8)';
+  ctx.font = '19px system-ui, sans-serif';
+  ctx.fillText(charakter.beschreibung, mitte, 214);
+
+  ctx.fillStyle = 'rgba(243, 233, 247, 0.55)';
+  ctx.font = '17px system-ui, sans-serif';
+  ctx.fillText('← → Gegner wählen · Enter kämpfen · Esc zurück', mitte, 510);
   ctx.textAlign = 'left';
 }

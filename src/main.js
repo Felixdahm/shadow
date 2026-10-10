@@ -1,12 +1,12 @@
 import { CONFIG } from './config.js';
 import { istGedrueckt, verbraucheFrisch, tickEnde } from './input.js';
 import { Kaempfer } from './fighter.js';
-import { CHARAKTERE, GEGNER_PFAD } from './characters.js';
+import { CHARAKTERE, GEGNER_PFAD, STORY } from './characters.js';
 import { kiEingabe, leereEingabe } from './ai.js';
 import { wendePhysikAn, trenneKaempfer } from './physics.js';
 import { verarbeiteKampf } from './combat.js';
 import { zeichneStage, zeichneVordergrund } from './stage.js';
-import { zeichneUI } from './ui.js';
+import { zeichneUI, zeichneMenue, zeichneStory, zeichneGegnerWahl } from './ui.js';
 import { spawnTrefferFunken, updatePartikel, zeichnePartikel, leerePartikel } from './particles.js';
 import { spieleTreffer, spieleBlock, spieleKo, spieleGong } from './sound.js';
 
@@ -16,8 +16,15 @@ const ctx = canvas.getContext('2d');
 const START_X_SPIELER = 320;
 const START_X_GEGNER = 640;
 
-let gegnerIndex = 0; // Position auf dem Schattenpfad (bleibt über Kämpfe erhalten)
-let spiel;
+// Oberster Spielzustand: Menü → (Story-Text) → Kampf → zurück
+let modus = 'menue'; // 'menue' | 'gegnerWahl' | 'story' | 'kampf'
+let menueIndex = 0;  // gewählter Menüeintrag
+let wahlIndex = 0;   // gewählter Gegner im freien Kampf
+let menueZeit = 0;   // für Atem-Animationen im Menü
+let gegnerIndex = 0; // Position auf dem Schattenpfad
+let storyModus = true;
+let spiel = null;
+
 const kamera = { x: 0, shake: 0 };
 
 function neuerKampf() {
@@ -27,7 +34,7 @@ function neuerKampf() {
     spieler: new Kaempfer(CHARAKTERE.juro, START_X_SPIELER, 1),
     gegner: new Kaempfer(gegnerDaten, START_X_GEGNER, -1),
     runde: 1,
-    phase: 'intro', // intro → kampf → rundenEnde → (intro | matchEnde) → (neuer Kampf | pfadEnde)
+    phase: 'intro', // intro → kampf → rundenEnde → (intro | matchEnde) → (weiter | pfadEnde)
     phasenZeit: 0,
     hitstop: 0,
     rundenSieger: null,
@@ -37,10 +44,17 @@ function neuerKampf() {
     kampfAnzahl: GEGNER_PFAD.length,
     naechsterGegner: naechsterName,
     arena: gegnerDaten.arena ?? 'aschenpass',
+    storyModus,
   };
   kamera.x = 0;
   kamera.shake = 0;
   leerePartikel();
+  modus = 'kampf';
+}
+
+function zumMenue() {
+  modus = 'menue';
+  spiel = null;
 }
 
 function naechsteRunde() {
@@ -64,12 +78,52 @@ function spielerEingabe() {
   };
 }
 
-function update(dt) {
-  if (verbraucheFrisch('KeyR')) {
-    // Nach dem Pfad-Ende beginnt der ganze Pfad von vorn, sonst nur der aktuelle Kampf
-    if (spiel.phase === 'pfadEnde') gegnerIndex = 0;
+// ---------- Menü- und Story-Logik ----------
+
+function updateMenue() {
+  if (verbraucheFrisch('ArrowUp')) menueIndex = (menueIndex + 1) % 2;
+  if (verbraucheFrisch('ArrowDown')) menueIndex = (menueIndex + 1) % 2;
+  if (verbraucheFrisch('Enter')) {
+    if (menueIndex === 0) {
+      storyModus = true;
+      gegnerIndex = 0;
+      modus = 'story';
+    } else {
+      modus = 'gegnerWahl';
+    }
+  }
+}
+
+function updateGegnerWahl() {
+  if (verbraucheFrisch('ArrowLeft')) wahlIndex = (wahlIndex + GEGNER_PFAD.length - 1) % GEGNER_PFAD.length;
+  if (verbraucheFrisch('ArrowRight')) wahlIndex = (wahlIndex + 1) % GEGNER_PFAD.length;
+  if (verbraucheFrisch('Enter')) {
+    storyModus = false;
+    gegnerIndex = wahlIndex;
     neuerKampf();
-    tickEnde();
+  }
+  if (verbraucheFrisch('Escape')) zumMenue();
+}
+
+function updateStory() {
+  if (verbraucheFrisch('Enter')) neuerKampf();
+  if (verbraucheFrisch('Escape')) zumMenue();
+}
+
+// ---------- Kampf-Logik ----------
+
+function updateKampf(dt) {
+  if (verbraucheFrisch('Escape')) {
+    zumMenue();
+    return;
+  }
+  if (verbraucheFrisch('KeyR')) {
+    if (spiel.phase === 'pfadEnde') { gegnerIndex = 0; zumMenue(); } else neuerKampf();
+    return;
+  }
+  if (spiel.phase === 'pfadEnde' && verbraucheFrisch('Enter')) {
+    gegnerIndex = 0;
+    zumMenue();
     return;
   }
 
@@ -86,7 +140,6 @@ function update(dt) {
   // Hitstop: die Welt friert für einen Wimpernschlag ein, das macht Treffer wuchtig
   if (spiel.hitstop > 0) {
     spiel.hitstop -= dt;
-    tickEnde();
     return;
   }
 
@@ -142,23 +195,32 @@ function update(dt) {
       }
     }
   } else if (spiel.phase === 'matchEnde') {
-    // Gewonnen → nach kurzer Pause automatisch zum nächsten Gegner auf dem Pfad
-    if (spiel.spielerHatGewonnen && spiel.phasenZeit >= 3) {
+    // Story-Modus: Nach dem Sieg geht es mit dem nächsten Story-Text weiter
+    if (spiel.storyModus && spiel.spielerHatGewonnen && spiel.phasenZeit >= 3) {
       if (gegnerIndex < GEGNER_PFAD.length - 1) {
         gegnerIndex++;
-        neuerKampf();
+        modus = 'story';
       } else {
         spiel.phase = 'pfadEnde';
         spiel.phasenZeit = 0;
       }
     }
-    // Verloren → warten auf R (Revanche)
+    // Freier Kampf oder Niederlage: R für Revanche, Esc für das Menü
   }
+}
 
+function update(dt) {
+  menueZeit += dt;
+  if (modus === 'menue') updateMenue();
+  else if (modus === 'gegnerWahl') updateGegnerWahl();
+  else if (modus === 'story') updateStory();
+  else updateKampf(dt);
   tickEnde();
 }
 
-function render() {
+// ---------- Zeichnen ----------
+
+function renderKampf() {
   // Kamerawackeln: kleiner Zufalls-Versatz, der schnell abklingt
   const jitterX = (Math.random() * 2 - 1) * kamera.shake;
   const jitterY = (Math.random() * 2 - 1) * kamera.shake * 0.6;
@@ -182,6 +244,27 @@ function render() {
   zeichneUI(ctx, spiel); // UI wackelt nicht mit
 }
 
+function renderMenue() {
+  // Passende Arena als lebendiger Hintergrund, Kamera driftet langsam
+  const arena =
+    modus === 'gegnerWahl' ? CHARAKTERE[GEGNER_PFAD[wahlIndex]].arena :
+    modus === 'story' ? CHARAKTERE[GEGNER_PFAD[gegnerIndex]].arena :
+    'aschenpass';
+  const drift = Math.sin(menueZeit * 0.25) * 60;
+
+  zeichneStage(ctx, drift, arena);
+  zeichneVordergrund(ctx, drift, arena);
+
+  if (modus === 'menue') zeichneMenue(ctx, menueIndex, menueZeit);
+  else if (modus === 'story') zeichneStory(ctx, STORY[GEGNER_PFAD[gegnerIndex]]);
+  else zeichneGegnerWahl(ctx, CHARAKTERE[GEGNER_PFAD[wahlIndex]], menueZeit);
+}
+
+function render() {
+  if (modus === 'kampf') renderKampf();
+  else renderMenue();
+}
+
 // Fester Zeitschritt: Die Simulation läuft immer mit 120 Schritten pro Sekunde,
 // egal ob der Bildschirm 60 Hz oder 120 Hz hat. Übrige Zeit wird angespart.
 const SCHRITT = 1 / 120;
@@ -201,5 +284,4 @@ function schleife(jetzt) {
   requestAnimationFrame(schleife);
 }
 
-neuerKampf();
 requestAnimationFrame(schleife);
