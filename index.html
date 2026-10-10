@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>Schattenpfad</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #0e0a14;
+      color: #cbb8d9;
+      font-family: system-ui, sans-serif;
+    }
+    canvas {
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+      border-radius: 6px;
+    }
+    p { font-size: 14px; opacity: 0.8; }
+  </style>
+</head>
+<body>
+  <canvas id="spiel" width="960" height="540"></canvas>
+  <p>← → laufen &nbsp;·&nbsp; ↑ springen &nbsp;·&nbsp; ↓ ducken &nbsp;·&nbsp; A Schlag &nbsp;·&nbsp; S Tritt &nbsp;·&nbsp; D blocken &nbsp;·&nbsp; R Neustart</p>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
