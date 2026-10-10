@@ -36,6 +36,7 @@ function neuerKampf() {
     kampfNummer: gegnerIndex + 1,
     kampfAnzahl: GEGNER_PFAD.length,
     naechsterGegner: naechsterName,
+    arena: gegnerDaten.arena ?? 'aschenpass',
   };
   kamera.x = 0;
   kamera.shake = 0;
@@ -165,7 +166,7 @@ function render() {
   ctx.save();
   ctx.translate(jitterX, jitterY);
 
-  zeichneStage(ctx, kamera.x); // Hintergrund-Ebenen mit Parallax
+  zeichneStage(ctx, kamera.x, spiel.arena); // Hintergrund-Ebenen mit Parallax
 
   ctx.save();
   ctx.translate(-kamera.x, 0); // Welt-Ebene: Kämpfer und Partikel
@@ -174,7 +175,7 @@ function render() {
   zeichnePartikel(ctx);
   ctx.restore();
 
-  zeichneVordergrund(ctx, kamera.x); // Felsen vor den Kämpfern
+  zeichneVordergrund(ctx, kamera.x, spiel.arena); // Felsen vor den Kämpfern
 
   ctx.restore();
 

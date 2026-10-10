@@ -23,6 +23,7 @@ export const CHARAKTERE = {
     waffe: null,
     extras: [],
     kiStil: 'ausgewogen',
+    arena: 'aschenpass',
   },
   veyra: {
     name: 'Veyra',
@@ -33,6 +34,7 @@ export const CHARAKTERE = {
     waffe: 'stab',
     extras: ['zopf'],
     kiStil: 'aggressiv',
+    arena: 'mondhain',
   },
   dorn: {
     name: 'Dorn',
@@ -43,6 +45,7 @@ export const CHARAKTERE = {
     waffe: 'schwert',
     extras: ['kapuze'],
     kiStil: 'defensiv',
+    arena: 'nebelschlucht',
   },
 };
 
