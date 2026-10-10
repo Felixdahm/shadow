@@ -1,5 +1,5 @@
 import { CONFIG } from './config.js';
-import { poseZumZeitpunkt } from './animations.js';
+import { poseZumZeitpunkt, mischePosen, weich, sprungPose } from './animations.js';
 import { zeichneSkelett } from './skeleton.js';
 import { spieleSchwung } from './sound.js';
 
@@ -27,6 +27,11 @@ export class Kaempfer {
     this.kombo = 0;            // Position in der Angriffskette
     this.puffer = null;        // vorgemerkter Folgeangriff (Kombo)
     this.kiGedaechtnis = { timer: 0, eingabe: null };
+    // Für weiche Übergänge: die zuletzt gezeichnete Pose wird beim
+    // Zustandswechsel als Startpunkt der Überblendung gemerkt.
+    this.letztePose = null;
+    this.uebergangVon = null;
+    this.uebergangZeit = 1;
   }
 
   amBoden() {
@@ -45,6 +50,8 @@ export class Kaempfer {
     this.zustand = zustand;
     this.zustandZeit = 0;
     this.hatGetroffen = false;
+    this.uebergangVon = this.letztePose;
+    this.uebergangZeit = 0;
     if (zustand === 'schlag' || zustand === 'tritt') {
       spieleSchwung();
     } else {
@@ -67,9 +74,11 @@ export class Kaempfer {
   }
 
   update(dt, eingabe, gegner) {
-    // Schnelle Charaktere führen auch ihre Angriffe schneller aus:
-    // die Angriffs-Uhr läuft mit tempoFaktor, Animation und Treffer-Fenster bleiben synchron.
-    this.zustandZeit += dt * (this.istAngriff() ? this.charakter.tempoFaktor : 1);
+    // Schnelle Charaktere führen Angriffe schneller aus und laufen hektischer:
+    // die Zustands-Uhr läuft mit tempoFaktor, Animation und Treffer-Fenster bleiben synchron.
+    const eiltEs = this.istAngriff() || this.zustand === 'laufen';
+    this.zustandZeit += dt * (eiltEs ? this.charakter.tempoFaktor : 1);
+    this.uebergangZeit += dt;
 
     // Der Anzeige-Balken gleitet dem echten HP-Stand hinterher
     this.anzeigeHp += (this.hp - this.anzeigeHp) * Math.min(1, 5 * dt);
@@ -154,7 +163,18 @@ export class Kaempfer {
     ctx.ellipse(this.x, CONFIG.physik.bodenY + 8, 42 * this.skalierung, 9, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    const pose = poseZumZeitpunkt(this.zustand, this.zustandZeit);
+    // Im Sprung folgt die Pose der Flugbahn, sonst der Keyframe-Animation
+    let pose = this.zustand === 'springen'
+      ? sprungPose(this.vy)
+      : poseZumZeitpunkt(this.zustand, this.zustandZeit);
+
+    // Weiche Überblendung vom letzten Zustand in den neuen
+    const D = CONFIG.animation.uebergangsDauer;
+    if (this.uebergangVon && this.uebergangZeit < D) {
+      pose = mischePosen(this.uebergangVon, pose, weich(this.uebergangZeit / D));
+    }
+    this.letztePose = pose;
+
     // Hit-Flash: direkt nach einem Treffer färbt sich die Silhouette kurz dunkelrot
     const flash = this.zustand === 'treffer' && this.zustandZeit < 0.12 ? '#6b1626' : null;
     zeichneSkelett(ctx, this.x, this.y, this.blick, pose, {

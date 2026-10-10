@@ -45,6 +45,10 @@ export const CONFIG = {
     blockRueckstossFaktor: 0.4,
   },
 
+  animation: {
+    uebergangsDauer: 0.1, // Posen blenden bei Zustandswechseln weich ineinander über
+  },
+
   // Waffen verstärken nur den Arm-Angriff (Schlag wird zum Hieb)
   waffen: {
     schwert: { laenge: 55, reichweiteBonus: 45, schadenBonus: 4 },
