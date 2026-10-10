@@ -1,6 +1,7 @@
 import { CONFIG } from './config.js';
 import { zeichneSkelett } from './skeleton.js';
 import { poseZumZeitpunkt } from './animations.js';
+import { TOUCH_BUTTONS, istGedrueckt } from './input.js';
 
 const BALKEN_BREITE = 340;
 const BALKEN_HOEHE = 20;
@@ -25,16 +26,26 @@ function lebensbalken(ctx, x, y, kaempfer, gespiegelt) {
   // Der Gegner-Balken leert sich zur Mitte hin (gespiegelt)
   ctx.fillRect(gespiegelt ? x + BALKEN_BREITE - fuellung : x, y, fuellung, BALKEN_HOEHE);
 
+  // Energie-Leiste direkt unter dem Lebensbalken; pulsiert golden, wenn voll
+  const energieAnteil = kaempfer.energie / CONFIG.spezial.energieMax;
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+  ctx.fillRect(x, y + BALKEN_HOEHE + 5, BALKEN_BREITE, 7);
+  const voll = energieAnteil >= 1;
+  const puls = voll ? 0.7 + 0.3 * Math.sin(performance.now() / 120) : 1;
+  ctx.fillStyle = voll ? `rgba(255, 210, 125, ${puls.toFixed(2)})` : '#8a6cc9';
+  const eBreite = BALKEN_BREITE * energieAnteil;
+  ctx.fillRect(gespiegelt ? x + BALKEN_BREITE - eBreite : x, y + BALKEN_HOEHE + 5, eBreite, 7);
+
   ctx.fillStyle = '#f3e9f7';
   ctx.font = 'bold 15px system-ui, sans-serif';
   ctx.textAlign = gespiegelt ? 'right' : 'left';
-  ctx.fillText(kaempfer.name, gespiegelt ? x + BALKEN_BREITE : x, y + BALKEN_HOEHE + 20);
+  ctx.fillText(kaempfer.name, gespiegelt ? x + BALKEN_BREITE : x, y + BALKEN_HOEHE + 30);
 
   // Runden-Siege als Punkte unter dem Namen
   for (let i = 0; i < CONFIG.runden.gewinneNoetig; i++) {
     const px = gespiegelt ? x + BALKEN_BREITE - 8 - i * 24 : x + 8 + i * 24;
     ctx.beginPath();
-    ctx.arc(px, y + BALKEN_HOEHE + 38, 7, 0, Math.PI * 2);
+    ctx.arc(px, y + BALKEN_HOEHE + 48, 7, 0, Math.PI * 2);
     ctx.fillStyle = i < kaempfer.rundenSiege ? '#ffd27d' : 'rgba(0, 0, 0, 0.35)';
     ctx.fill();
   }
@@ -94,6 +105,30 @@ export function zeichneUI(ctx, spiel) {
     untertitel(ctx, 'Enter für das Menü');
   }
 
+  ctx.textAlign = 'left';
+}
+
+// Bildschirm-Buttons für Touch-Geräte; der Spezial-Button leuchtet bei voller Energie
+export function zeichneTouchSteuerung(ctx, spieler) {
+  ctx.textAlign = 'center';
+  for (const b of TOUCH_BUTTONS) {
+    const gehalten = istGedrueckt(b.code);
+    const istSpezial = b.code === 'KeyW';
+    const bereit = istSpezial && spieler.energie >= CONFIG.spezial.energieMax;
+
+    ctx.fillStyle = gehalten ? 'rgba(255, 235, 200, 0.35)' : bereit ? 'rgba(255, 210, 125, 0.3)' : 'rgba(10, 8, 18, 0.35)';
+    ctx.strokeStyle = bereit ? 'rgba(255, 210, 125, 0.9)' : 'rgba(243, 233, 247, 0.4)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(b.x, b.y, b.b, b.h, 14);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = bereit ? '#ffd27d' : 'rgba(243, 233, 247, 0.85)';
+    const istSymbol = b.label.length === 1;
+    ctx.font = istSymbol ? '30px system-ui, sans-serif' : 'bold 13px system-ui, sans-serif';
+    ctx.fillText(b.label, b.x + b.b / 2, b.y + b.h / 2 + (istSymbol ? 11 : 5));
+  }
   ctx.textAlign = 'left';
 }
 

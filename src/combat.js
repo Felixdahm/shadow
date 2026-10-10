@@ -10,9 +10,8 @@ export function verarbeiteKampf(a, b) {
 }
 
 function pruefeTreffer(angreifer, ziel, ereignisse) {
-  if (angreifer.zustand !== 'schlag' && angreifer.zustand !== 'tritt') return;
-
   const A = CONFIG.angriffe[angreifer.zustand];
+  if (!A) return; // kein Angriffs-Zustand
   // Nur im aktiven Fenster des Angriffs kann getroffen werden, und nur einmal
   if (angreifer.hatGetroffen) return;
   if (angreifer.zustandZeit < A.aktivVon || angreifer.zustandZeit > A.aktivBis) return;
@@ -39,11 +38,18 @@ function pruefeTreffer(angreifer, ziel, ereignisse) {
 
   angreifer.hatGetroffen = true;
 
-  const blockt = ziel.zustand === 'block';
+  const istSpezial = angreifer.zustand === 'spezial';
+  // Der Schattenstoß durchbricht jeden Block
+  const blockt = ziel.zustand === 'block' && !istSpezial;
   const basisSchaden = Math.round((A.schaden + (waffe?.schadenBonus ?? 0)) * angreifer.charakter.schadenFaktor);
   const schaden = blockt ? Math.max(1, Math.round(basisSchaden * CONFIG.treffer.blockSchadenFaktor)) : basisSchaden;
   ziel.hp = Math.max(0, ziel.hp - schaden);
   ziel.rueckstoss = angreifer.blick * A.rueckstoss * (blockt ? CONFIG.treffer.blockRueckstossFaktor : 1);
+
+  // Energie: Austeilen lädt die eigene Leiste, Einstecken die des Ziels
+  const S = CONFIG.spezial;
+  if (!istSpezial) angreifer.energie = Math.min(S.energieMax, angreifer.energie + S.energieProTreffer);
+  ziel.energie = Math.min(S.energieMax, ziel.energie + (blockt ? S.energieProBlock : S.energieProEinstecken));
 
   const ko = ziel.hp <= 0;
   if (ko) {
@@ -59,5 +65,6 @@ function pruefeTreffer(angreifer, ziel, ereignisse) {
     richtung: angreifer.blick,
     blockt,
     ko,
+    spezial: istSpezial,
   });
 }

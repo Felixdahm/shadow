@@ -1,7 +1,7 @@
 import { CONFIG } from './config.js';
 import { poseZumZeitpunkt, mischePosen, weich, sprungPose } from './animations.js';
 import { zeichneSkelett } from './skeleton.js';
-import { spieleSchwung } from './sound.js';
+import { spieleSchwung, spieleSpezialStart } from './sound.js';
 
 export class Kaempfer {
   constructor(charakter, x, blick) {
@@ -24,6 +24,7 @@ export class Kaempfer {
     this.zustandZeit = 0;
     this.hatGetroffen = false; // jeder Angriff trifft höchstens einmal
     this.rueckstoss = 0;       // Rückstoß-Geschwindigkeit nach einem Treffer
+    this.energie = 0;          // füllt sich durch Treffer; voll = Spezialangriff bereit
     this.kombo = 0;            // Position in der Angriffskette
     this.puffer = null;        // vorgemerkter Folgeangriff (Kombo)
     this.kiGedaechtnis = { timer: 0, eingabe: null };
@@ -43,7 +44,7 @@ export class Kaempfer {
   }
 
   istAngriff() {
-    return this.zustand === 'schlag' || this.zustand === 'tritt';
+    return this.zustand === 'schlag' || this.zustand === 'tritt' || this.zustand === 'spezial';
   }
 
   wechsle(zustand) {
@@ -54,6 +55,8 @@ export class Kaempfer {
     this.uebergangZeit = 0;
     if (zustand === 'schlag' || zustand === 'tritt') {
       spieleSchwung();
+    } else if (zustand === 'spezial') {
+      spieleSpezialStart();
     } else {
       this.kombo = 0;
       this.puffer = null;
@@ -70,6 +73,7 @@ export class Kaempfer {
     this.hp = this.maxHp;
     this.anzeigeHp = this.hp;
     this.rueckstoss = 0;
+    this.energie = 0;
     this.wechsle('stehen');
   }
 
@@ -101,21 +105,28 @@ export class Kaempfer {
 
     if (this.istAngriff()) {
       const A = CONFIG.angriffe[this.zustand];
-      // Leichter Ausfallschritt nach vorn macht Angriffe druckvoller
-      this.vx = this.zustandZeit < A.aktivBis ? this.blick * 90 : 0;
 
-      // Kombo: Während des Angriffs gedrückte Tasten werden gepuffert …
-      if (eingabe.schlag) this.puffer = 'schlag';
-      if (eingabe.tritt) this.puffer = 'tritt';
+      if (this.zustand === 'spezial') {
+        // Der Schattenstoß trägt den Kämpfer mit einem Dash nach vorn
+        const dash = this.zustandZeit > 0.12 && this.zustandZeit < A.aktivBis;
+        this.vx = dash ? this.blick * CONFIG.spezial.dashTempo : 0;
+      } else {
+        // Leichter Ausfallschritt nach vorn macht Angriffe druckvoller
+        this.vx = this.zustandZeit < A.aktivBis ? this.blick * 90 : 0;
 
-      // … und nach dem Treffer-Fenster darf direkt der nächste Angriff starten
-      const kettenFenster = A.aktivBis + CONFIG.kombo.fensterNach;
-      if (this.puffer && this.kombo < CONFIG.kombo.maxKette - 1 && this.zustandZeit >= kettenFenster) {
-        this.kombo++;
-        const naechster = this.puffer;
-        this.puffer = null;
-        this.wechsle(naechster);
-        return;
+        // Kombo: Während des Angriffs gedrückte Tasten werden gepuffert …
+        if (eingabe.schlag) this.puffer = 'schlag';
+        if (eingabe.tritt) this.puffer = 'tritt';
+
+        // … und nach dem Treffer-Fenster darf direkt der nächste Angriff starten
+        const kettenFenster = A.aktivBis + CONFIG.kombo.fensterNach;
+        if (this.puffer && this.kombo < CONFIG.kombo.maxKette - 1 && this.zustandZeit >= kettenFenster) {
+          this.kombo++;
+          const naechster = this.puffer;
+          this.puffer = null;
+          this.wechsle(naechster);
+          return;
+        }
       }
 
       if (this.zustandZeit >= A.dauer) {
@@ -137,7 +148,10 @@ export class Kaempfer {
     this.blick = gegner.x >= this.x ? 1 : -1; // immer zum Gegner schauen
     this.vx = 0;
 
-    if (eingabe.schlag) {
+    if (eingabe.spezial && this.energie >= CONFIG.spezial.energieMax) {
+      this.energie = 0;
+      this.wechsle('spezial');
+    } else if (eingabe.schlag) {
       this.wechsle('schlag');
     } else if (eingabe.tritt) {
       this.wechsle('tritt');

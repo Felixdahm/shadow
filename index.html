@@ -2,11 +2,14 @@
 <html lang="de">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Schattenpfad</title>
   <style>
-    body {
+    html, body {
       margin: 0;
-      min-height: 100vh;
+      height: 100%;
+    }
+    body {
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -14,17 +17,29 @@
       background: #0e0a14;
       color: #cbb8d9;
       font-family: system-ui, sans-serif;
+      overflow: hidden;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
     }
     canvas {
       box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
       border-radius: 6px;
+      /* Passt sich dem Bildschirm an, behält aber das 16:9-Format */
+      width: min(100vw, calc(100vh * 16 / 9), 960px);
+      height: auto;
+      touch-action: none;
     }
-    p { font-size: 14px; opacity: 0.8; }
+    p { font-size: 14px; opacity: 0.8; padding: 0 12px; text-align: center; }
+    /* Auf Touch-Geräten die Tastatur-Hinweise ausblenden */
+    @media (hover: none) and (pointer: coarse) {
+      p { display: none; }
+    }
   </style>
 </head>
 <body>
   <canvas id="spiel" width="960" height="540"></canvas>
-  <p>← → laufen &nbsp;·&nbsp; ↑ springen &nbsp;·&nbsp; ↓ ducken &nbsp;·&nbsp; A Schlag &nbsp;·&nbsp; S Tritt &nbsp;·&nbsp; D blocken &nbsp;·&nbsp; R Revanche &nbsp;·&nbsp; Enter Auswahl &nbsp;·&nbsp; Esc Menü</p>
+  <p>← → laufen &nbsp;·&nbsp; ↑ springen &nbsp;·&nbsp; ↓ ducken &nbsp;·&nbsp; A Schlag &nbsp;·&nbsp; S Tritt &nbsp;·&nbsp; D blocken &nbsp;·&nbsp; W Spezial &nbsp;·&nbsp; R Revanche &nbsp;·&nbsp; Enter Auswahl &nbsp;·&nbsp; Esc Menü</p>
   <script type="module" src="src/main.js"></script>
 </body>
 </html>

@@ -2,7 +2,7 @@ import { CONFIG } from './config.js';
 import { KI_STILE } from './characters.js';
 
 export function leereEingabe() {
-  return { links: false, rechts: false, springen: false, ducken: false, schlag: false, tritt: false, block: false };
+  return { links: false, rechts: false, springen: false, ducken: false, schlag: false, tritt: false, block: false, spezial: false };
 }
 
 // Gegner-KI: entscheidet alle 0,2–0,45 s neu. Der KI-Stil des Charakters
@@ -15,6 +15,7 @@ export function kiEingabe(ich, gegner, dt) {
   g.eingabe.schlag = false;
   g.eingabe.tritt = false;
   g.eingabe.springen = false;
+  g.eingabe.spezial = false;
 
   g.timer -= dt;
   if (g.timer > 0) return g.eingabe;
@@ -35,6 +36,12 @@ export function kiEingabe(ich, gegner, dt) {
   const gegnerGreiftAn = gegner.zustand === 'schlag' || gegner.zustand === 'tritt';
   if (gegnerGreiftAn && abstand < K.angriffsAbstand + 40 && wuerfel < stil.blockNeigung) {
     e.block = true;
+    return e;
+  }
+
+  // Volle Energie-Leiste → mit hoher Wahrscheinlichkeit den Schattenstoß zünden
+  if (ich.energie >= CONFIG.spezial.energieMax && abstand < K.angriffsAbstand + 70 && wuerfel < 0.55) {
+    e.spezial = true;
     return e;
   }
 

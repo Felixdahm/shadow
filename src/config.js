@@ -35,8 +35,19 @@ export const CONFIG = {
   // Jeder Angriff: Gesamtdauer, aktives Treffer-Fenster, Schaden, Reichweite,
   // Höhe der Hitbox über dem Boden und Rückstoß für den Getroffenen.
   angriffe: {
-    schlag: { dauer: 0.38, aktivVon: 0.12, aktivBis: 0.24, schaden: 8,  reichweite: 78, hoeheVomBoden: 140, rueckstoss: 170 },
-    tritt:  { dauer: 0.52, aktivVon: 0.18, aktivBis: 0.32, schaden: 13, reichweite: 95, hoeheVomBoden: 82,  rueckstoss: 260 },
+    schlag:  { dauer: 0.38, aktivVon: 0.12, aktivBis: 0.24, schaden: 8,  reichweite: 78,  hoeheVomBoden: 140, rueckstoss: 170 },
+    tritt:   { dauer: 0.52, aktivVon: 0.18, aktivBis: 0.32, schaden: 13, reichweite: 95,  hoeheVomBoden: 82,  rueckstoss: 260 },
+    spezial: { dauer: 0.6,  aktivVon: 0.25, aktivBis: 0.42, schaden: 24, reichweite: 110, hoeheVomBoden: 120, rueckstoss: 430 },
+  },
+
+  // Spezialangriff "Schattenstoß": braucht eine volle Energie-Leiste,
+  // ist unblockbar und trägt den Angreifer mit einem Dash nach vorn.
+  spezial: {
+    energieMax: 100,
+    energieProTreffer: 16,    // Energie fürs Austeilen
+    energieProEinstecken: 10, // Energie fürs Einstecken
+    energieProBlock: 6,       // geblockte Treffer geben dem Blocker etwas Energie
+    dashTempo: 420,
   },
 
   treffer: {

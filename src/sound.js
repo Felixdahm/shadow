@@ -63,6 +63,17 @@ export function spieleKo() {
   rauschen(0.25, 200, 0.3);
 }
 
+export function spieleSpezialStart() {
+  ton(180, 950, 0.3, 'sawtooth', 0.12); // aufsteigendes Aufladen
+  rauschen(0.25, 1400, 0.1);
+}
+
+export function spieleSpezialTreffer() {
+  ton(130, 32, 0.4, 'sine', 0.6);
+  ton(420, 90, 0.2, 'square', 0.15);
+  rauschen(0.2, 300, 0.3);
+}
+
 export function spieleGong() {
   ton(440, 430, 0.9, 'triangle', 0.25);
   ton(662, 650, 0.7, 'triangle', 0.12); // leicht verstimmte Oberton-Schwebung

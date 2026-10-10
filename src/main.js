@@ -1,14 +1,14 @@
 import { CONFIG } from './config.js';
-import { istGedrueckt, verbraucheFrisch, tickEnde } from './input.js';
+import { istGedrueckt, verbraucheFrisch, tickEnde, aktiviereTouch, istTouchAktiv, verbraucheTap } from './input.js';
 import { Kaempfer } from './fighter.js';
 import { CHARAKTERE, GEGNER_PFAD, STORY } from './characters.js';
 import { kiEingabe, leereEingabe } from './ai.js';
 import { wendePhysikAn, trenneKaempfer } from './physics.js';
 import { verarbeiteKampf } from './combat.js';
 import { zeichneStage, zeichneVordergrund } from './stage.js';
-import { zeichneUI, zeichneMenue, zeichneStory, zeichneGegnerWahl } from './ui.js';
+import { zeichneUI, zeichneMenue, zeichneStory, zeichneGegnerWahl, zeichneTouchSteuerung } from './ui.js';
 import { spawnTrefferFunken, updatePartikel, zeichnePartikel, leerePartikel } from './particles.js';
-import { spieleTreffer, spieleBlock, spieleKo, spieleGong } from './sound.js';
+import { spieleTreffer, spieleBlock, spieleKo, spieleGong, spieleSpezialTreffer } from './sound.js';
 
 const canvas = document.getElementById('spiel');
 const ctx = canvas.getContext('2d');
@@ -75,6 +75,7 @@ function spielerEingabe() {
     springen: verbraucheFrisch('ArrowUp'),
     schlag: verbraucheFrisch('KeyA'),
     tritt: verbraucheFrisch('KeyS'),
+    spezial: verbraucheFrisch('KeyW'),
   };
 }
 
@@ -83,7 +84,14 @@ function spielerEingabe() {
 function updateMenue() {
   if (verbraucheFrisch('ArrowUp')) menueIndex = (menueIndex + 1) % 2;
   if (verbraucheFrisch('ArrowDown')) menueIndex = (menueIndex + 1) % 2;
-  if (verbraucheFrisch('Enter')) {
+  // Touch: Tipp auf einen Menüeintrag wählt und bestätigt ihn
+  const tap = verbraucheTap();
+  let bestaetigt = verbraucheFrisch('Enter');
+  if (tap) {
+    if (tap.y > 272 && tap.y <= 330) { menueIndex = 0; bestaetigt = true; }
+    else if (tap.y > 330 && tap.y < 390) { menueIndex = 1; bestaetigt = true; }
+  }
+  if (bestaetigt) {
     if (menueIndex === 0) {
       storyModus = true;
       gegnerIndex = 0;
@@ -95,9 +103,19 @@ function updateMenue() {
 }
 
 function updateGegnerWahl() {
-  if (verbraucheFrisch('ArrowLeft')) wahlIndex = (wahlIndex + GEGNER_PFAD.length - 1) % GEGNER_PFAD.length;
-  if (verbraucheFrisch('ArrowRight')) wahlIndex = (wahlIndex + 1) % GEGNER_PFAD.length;
-  if (verbraucheFrisch('Enter')) {
+  // Touch: links/rechts tippen blättert, Mitte startet den Kampf
+  const tap = verbraucheTap();
+  let links = verbraucheFrisch('ArrowLeft');
+  let rechts = verbraucheFrisch('ArrowRight');
+  let start = verbraucheFrisch('Enter');
+  if (tap) {
+    if (tap.x < 320) links = true;
+    else if (tap.x > 640) rechts = true;
+    else start = true;
+  }
+  if (links) wahlIndex = (wahlIndex + GEGNER_PFAD.length - 1) % GEGNER_PFAD.length;
+  if (rechts) wahlIndex = (wahlIndex + 1) % GEGNER_PFAD.length;
+  if (start) {
     storyModus = false;
     gegnerIndex = wahlIndex;
     neuerKampf();
@@ -106,7 +124,7 @@ function updateGegnerWahl() {
 }
 
 function updateStory() {
-  if (verbraucheFrisch('Enter')) neuerKampf();
+  if (verbraucheFrisch('Enter') || verbraucheTap()) neuerKampf();
   if (verbraucheFrisch('Escape')) zumMenue();
 }
 
@@ -121,9 +139,14 @@ function updateKampf(dt) {
     if (spiel.phase === 'pfadEnde') { gegnerIndex = 0; zumMenue(); } else neuerKampf();
     return;
   }
-  if (spiel.phase === 'pfadEnde' && verbraucheFrisch('Enter')) {
+  if (spiel.phase === 'pfadEnde' && (verbraucheFrisch('Enter') || verbraucheTap())) {
     gegnerIndex = 0;
     zumMenue();
+    return;
+  }
+  // Touch: nach dem Match-Ende reicht ein Tipp irgendwo für die Revanche
+  if (spiel.phase === 'matchEnde' && !(spiel.storyModus && spiel.spielerHatGewonnen) && verbraucheTap()) {
+    neuerKampf();
     return;
   }
 
@@ -163,10 +186,11 @@ function updateKampf(dt) {
   } else if (kampfAktiv) {
     const ereignisse = verarbeiteKampf(spieler, gegner);
     for (const e of ereignisse) {
-      spawnTrefferFunken(e.x, e.y, e.richtung, e.blockt, e.ko);
-      spiel.hitstop = e.ko ? G.hitstopKo : e.blockt ? G.hitstopBlock : G.hitstopTreffer;
-      kamera.shake = Math.max(kamera.shake, e.ko ? G.shakeKo : e.blockt ? G.shakeBlock : G.shakeTreffer);
+      spawnTrefferFunken(e.x, e.y, e.richtung, e.blockt, e.ko || e.spezial);
+      spiel.hitstop = e.ko ? G.hitstopKo : e.spezial ? 0.12 : e.blockt ? G.hitstopBlock : G.hitstopTreffer;
+      kamera.shake = Math.max(kamera.shake, e.ko ? G.shakeKo : e.spezial ? 12 : e.blockt ? G.shakeBlock : G.shakeTreffer);
       if (e.ko) spieleKo();
+      else if (e.spezial) spieleSpezialTreffer();
       else if (e.blockt) spieleBlock();
       else spieleTreffer();
     }
@@ -242,6 +266,8 @@ function renderKampf() {
   ctx.restore();
 
   zeichneUI(ctx, spiel); // UI wackelt nicht mit
+
+  if (istTouchAktiv()) zeichneTouchSteuerung(ctx, spiel.spieler);
 }
 
 function renderMenue() {
@@ -284,4 +310,5 @@ function schleife(jetzt) {
   requestAnimationFrame(schleife);
 }
 
+aktiviereTouch(canvas);
 requestAnimationFrame(schleife);

@@ -46,6 +46,11 @@ const TRITT_TREFFEN   = p({ vHuefte: 1.5, vKnie: 0.05, rumpf: -0.38, kopf: 0.15,
 const TRITT_DURCHZUG  = p({ vHuefte: 1.58, vKnie: 0.2, rumpf: -0.44, kopf: 0.18, hueftFaktor: 0.89, hHuefte: -0.22, hKnie: 0.28, vSchulter: 0.95, vEllbogen: 1.1, hSchulter: -0.35, hEllbogen: 0.95 });
 const TRITT_ZURUECK   = p({ vHuefte: 1.05, vKnie: 1.55, rumpf: -0.18, hueftFaktor: 0.93, hHuefte: -0.1, hKnie: 0.2, vSchulter: 0.65, hSchulter: 0.1 });
 
+// Spezialangriff "Schattenstoß": tief sammeln → mit einem Dash explosiv durchstoßen
+const SPEZIAL_SAMMELN  = p({ vSchulter: -0.35, vEllbogen: 2.7, hSchulter: -0.25, hEllbogen: 2.4, rumpf: -0.18, kopf: 0.1, hueftFaktor: 0.82, vHuefte: 0.7, vKnie: 1.0, hHuefte: -0.45, hKnie: 0.7 });
+const SPEZIAL_STOSS    = p({ vSchulter: 1.65, vEllbogen: 0.02, hSchulter: -0.5, hEllbogen: 0.6, rumpf: 0.5, kopf: -0.15, hueftFaktor: 0.78, vHuefte: 1.0, vKnie: 0.5, hHuefte: -0.9, hKnie: 0.1 });
+const SPEZIAL_DURCHZUG = p({ vSchulter: 1.8, vEllbogen: 0.15, hSchulter: -0.55, hEllbogen: 0.6, rumpf: 0.55, kopf: -0.15, hueftFaktor: 0.76, vHuefte: 1.05, vKnie: 0.55, hHuefte: -0.95, hKnie: 0.12 });
+
 // Treffer-Reaktion mit leichtem Zurückfedern
 const TREFFER_POSE = p({ rumpf: -0.42, kopf: -0.35, vSchulter: 0.95, vEllbogen: 0.7, hSchulter: 0.5, hEllbogen: 0.4, vHuefte: 0.5, vKnie: 0.3, hHuefte: -0.4, hKnie: 0.5, hueftFaktor: 0.9 });
 const TREFFER_FEDERN = p({ rumpf: -0.15, kopf: -0.12, vSchulter: 0.8, vEllbogen: 1.2, hSchulter: 0.45, hEllbogen: 1.0, hueftFaktor: 0.93 });
@@ -107,6 +112,13 @@ export const ANIMATIONEN = {
     { t: 0.27, pose: TRITT_DURCHZUG, art: 'weich' },
     { t: 0.38, pose: TRITT_ZURUECK, art: 'weich' },
     { t: 0.52, pose: STAND, art: 'weich' },
+  ] },
+  spezial: { dauer: 0.6, loop: false, frames: [
+    { t: 0, pose: STAND },
+    { t: 0.14, pose: SPEZIAL_SAMMELN, art: 'weich' },
+    { t: 0.28, pose: SPEZIAL_STOSS, art: 'zack' },
+    { t: 0.42, pose: SPEZIAL_DURCHZUG, art: 'weich' },
+    { t: 0.6, pose: STAND, art: 'weich' },
   ] },
   treffer: { dauer: 0.3, loop: false, frames: [
     { t: 0, pose: STAND },
