@@ -10,7 +10,14 @@ function lebensbalken(ctx, x, y, kaempfer, gespiegelt) {
   ctx.fillStyle = '#541c2a';
   ctx.fillRect(x, y, BALKEN_BREITE, BALKEN_HOEHE);
 
-  const anteil = kaempfer.hp / CONFIG.kaempfer.maxHp;
+  const maxHp = CONFIG.kaempfer.maxHp;
+
+  // Nachlauf-Balken: zeigt hell, wie viel gerade abgezogen wurde
+  const geisterBreite = BALKEN_BREITE * (kaempfer.anzeigeHp / maxHp);
+  ctx.fillStyle = '#f2e6b8';
+  ctx.fillRect(gespiegelt ? x + BALKEN_BREITE - geisterBreite : x, y, geisterBreite, BALKEN_HOEHE);
+
+  const anteil = kaempfer.hp / maxHp;
   ctx.fillStyle = anteil > 0.5 ? '#7ddc6a' : anteil > 0.25 ? '#e8c84a' : '#e06046';
   const fuellung = BALKEN_BREITE * anteil;
   // Der Gegner-Balken leert sich zur Mitte hin (gespiegelt)
@@ -20,6 +27,35 @@ function lebensbalken(ctx, x, y, kaempfer, gespiegelt) {
   ctx.font = 'bold 15px system-ui, sans-serif';
   ctx.textAlign = gespiegelt ? 'right' : 'left';
   ctx.fillText(kaempfer.name, gespiegelt ? x + BALKEN_BREITE : x, y + BALKEN_HOEHE + 20);
+
+  // Runden-Siege als Punkte unter dem Namen
+  for (let i = 0; i < CONFIG.runden.gewinneNoetig; i++) {
+    const px = gespiegelt ? x + BALKEN_BREITE - 8 - i * 24 : x + 8 + i * 24;
+    ctx.beginPath();
+    ctx.arc(px, y + BALKEN_HOEHE + 38, 7, 0, Math.PI * 2);
+    ctx.fillStyle = i < kaempfer.rundenSiege ? '#ffd27d' : 'rgba(0, 0, 0, 0.35)';
+    ctx.fill();
+  }
+}
+
+// Großer Text in der Bildmitte mit "Pop"-Effekt beim Einblenden
+function ansage(ctx, text, groesse, zeit, y = 215) {
+  const skala = 1 + 0.35 * Math.exp(-9 * Math.max(0, zeit));
+  ctx.save();
+  ctx.translate(CONFIG.canvas.breite / 2, y);
+  ctx.scale(skala, skala);
+  ctx.fillStyle = 'rgba(255, 235, 200, 0.95)';
+  ctx.font = `bold ${groesse}px system-ui, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText(text, 0, 0);
+  ctx.restore();
+}
+
+function untertitel(ctx, text, y = 262) {
+  ctx.fillStyle = 'rgba(255, 235, 200, 0.9)';
+  ctx.font = '26px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(text, CONFIG.canvas.breite / 2, y);
 }
 
 export function zeichneUI(ctx, spiel) {
@@ -27,22 +63,18 @@ export function zeichneUI(ctx, spiel) {
   lebensbalken(ctx, 40, 28, spiel.spieler, false);
   lebensbalken(ctx, breite - 40 - BALKEN_BREITE, 28, spiel.gegner, true);
 
-  ctx.textAlign = 'center';
-
-  // "FIGHT!" am Anfang kurz einblenden
-  if (!spiel.vorbei && spiel.zeit < 1.3) {
-    const alpha = spiel.zeit < 0.9 ? 1 : (1.3 - spiel.zeit) / 0.4;
-    ctx.fillStyle = `rgba(255, 235, 200, ${alpha.toFixed(2)})`;
-    ctx.font = 'bold 72px system-ui, sans-serif';
-    ctx.fillText('FIGHT!', breite / 2, 220);
-  }
-
-  if (spiel.vorbei) {
-    ctx.fillStyle = 'rgba(255, 235, 200, 0.95)';
-    ctx.font = 'bold 84px system-ui, sans-serif';
-    ctx.fillText('K.O.', breite / 2, 215);
-    ctx.font = '26px system-ui, sans-serif';
-    ctx.fillText(`${spiel.sieger} gewinnt — R für Neustart`, breite / 2, 262);
+  if (spiel.phase === 'intro') {
+    if (spiel.phasenZeit < 0.85) {
+      ansage(ctx, `RUNDE ${spiel.runde}`, 64, spiel.phasenZeit);
+    } else {
+      ansage(ctx, 'FIGHT!', 76, spiel.phasenZeit - 0.85);
+    }
+  } else if (spiel.phase === 'rundenEnde') {
+    ansage(ctx, 'K.O.', 84, spiel.phasenZeit);
+    untertitel(ctx, `${spiel.rundenSieger} holt die Runde`);
+  } else if (spiel.phase === 'matchEnde') {
+    ansage(ctx, `${spiel.matchSieger.toUpperCase()} GEWINNT`, 56, spiel.phasenZeit);
+    untertitel(ctx, 'R für Neustart');
   }
 
   ctx.textAlign = 'left';

@@ -45,6 +45,24 @@ export const CONFIG = {
     blockRueckstossFaktor: 0.4,
   },
 
+  // Spielgefühl: kurzes Einfrieren bei Treffern (Hitstop) und Kamerawackeln
+  gefuehl: {
+    hitstopTreffer: 0.07,
+    hitstopBlock: 0.03,
+    hitstopKo: 0.14,
+    shakeTreffer: 8,
+    shakeBlock: 3,
+    shakeKo: 14,
+    kameraFolgen: 0.3,   // wie stark die Kamera der Kampfmitte folgt
+    kameraMaxX: 120,
+  },
+
+  runden: {
+    gewinneNoetig: 2,    // Best of 3
+    introDauer: 1.6,
+    rundenEndeDauer: 2.2,
+  },
+
   ki: {
     denkIntervallMin: 0.2,  // die KI entscheidet alle 0,2–0,45 s neu
     denkIntervallMax: 0.45,

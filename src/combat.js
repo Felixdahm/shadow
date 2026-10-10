@@ -1,11 +1,15 @@
 import { CONFIG } from './config.js';
 
+// Prüft beide Richtungen und gibt eine Liste von Treffer-Ereignissen zurück.
+// main.js nutzt die Ereignisse für Hitstop, Kamerawackeln und Partikel.
 export function verarbeiteKampf(a, b) {
-  pruefeTreffer(a, b);
-  pruefeTreffer(b, a);
+  const ereignisse = [];
+  pruefeTreffer(a, b, ereignisse);
+  pruefeTreffer(b, a, ereignisse);
+  return ereignisse;
 }
 
-function pruefeTreffer(angreifer, ziel) {
+function pruefeTreffer(angreifer, ziel, ereignisse) {
   if (angreifer.zustand !== 'schlag' && angreifer.zustand !== 'tritt') return;
 
   const A = CONFIG.angriffe[angreifer.zustand];
@@ -36,9 +40,19 @@ function pruefeTreffer(angreifer, ziel) {
   ziel.hp = Math.max(0, ziel.hp - schaden);
   ziel.rueckstoss = angreifer.blick * A.rueckstoss * (blockt ? CONFIG.treffer.blockRueckstossFaktor : 1);
 
-  if (ziel.hp <= 0) {
+  const ko = ziel.hp <= 0;
+  if (ko) {
     ziel.wechsle('ko');
   } else if (!blockt) {
     ziel.wechsle('treffer');
   }
+
+  ereignisse.push({
+    // Funken entstehen an der getroffenen Körperkante
+    x: ziel.x - angreifer.blick * (K.koerperBreite / 2),
+    y: hitY,
+    richtung: angreifer.blick,
+    blockt,
+    ko,
+  });
 }

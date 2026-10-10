@@ -4,7 +4,7 @@ import { CONFIG } from './config.js';
 // Winkel-Konvention: 0 = senkrecht (Gliedmaßen hängen nach unten, Rumpf zeigt nach oben),
 // positive Winkel drehen nach vorn in Blickrichtung. So funktioniert die Pose
 // unabhängig davon, ob der Kämpfer nach links oder rechts schaut.
-export function zeichneSkelett(ctx, x, fussY, blick, pose) {
+export function zeichneSkelett(ctx, x, fussY, blick, pose, einfaerbung = null) {
   const s = CONFIG.skelett;
   const hx = x;
   const hy = fussY - s.hueftHoehe * pose.hueftFaktor;
@@ -45,8 +45,9 @@ export function zeichneSkelett(ctx, x, fussY, blick, pose) {
   };
 
   // Hintere Gliedmaßen minimal heller — gibt der Silhouette Tiefe.
-  const hinten = '#1f1f28';
-  const vorn = '#0a0a0f';
+  // Bei einem Treffer wird die ganze Figur kurz eingefärbt (Hit-Flash).
+  const hinten = einfaerbung ?? '#1f1f28';
+  const vorn = einfaerbung ?? '#0a0a0f';
 
   bein(pose.hHuefte, pose.hKnie, hinten);
   arm(pose.hSchulter, pose.hEllbogen, hinten);

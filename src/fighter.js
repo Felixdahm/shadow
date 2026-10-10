@@ -11,6 +11,8 @@ export class Kaempfer {
     this.vy = 0;
     this.blick = blick; // +1 schaut nach rechts, -1 nach links
     this.hp = CONFIG.kaempfer.maxHp;
+    this.anzeigeHp = this.hp; // läuft dem echten HP-Wert hinterher (Balken-Nachlauf)
+    this.rundenSiege = 0;
     this.zustand = 'stehen';
     this.zustandZeit = 0;
     this.hatGetroffen = false; // jeder Angriff trifft höchstens einmal
@@ -32,9 +34,26 @@ export class Kaempfer {
     this.hatGetroffen = false;
   }
 
+  // Setzt alles für eine neue Runde zurück (Siege bleiben erhalten)
+  neueRunde(x, blick) {
+    this.x = x;
+    this.y = CONFIG.physik.bodenY;
+    this.vx = 0;
+    this.vy = 0;
+    this.blick = blick;
+    this.hp = CONFIG.kaempfer.maxHp;
+    this.anzeigeHp = this.hp;
+    this.rueckstoss = 0;
+    this.wechsle('stehen');
+  }
+
   update(dt, eingabe, gegner) {
     this.zustandZeit += dt;
     const K = CONFIG.kaempfer;
+
+    // Der Anzeige-Balken gleitet dem echten HP-Stand hinterher
+    this.anzeigeHp += (this.hp - this.anzeigeHp) * Math.min(1, 5 * dt);
+    if (Math.abs(this.anzeigeHp - this.hp) < 0.3) this.anzeigeHp = this.hp;
 
     // Rückstoß schiebt den Kämpfer und klingt von selbst ab
     this.x += this.rueckstoss * dt;
@@ -95,6 +114,8 @@ export class Kaempfer {
     ctx.fill();
 
     const pose = poseZumZeitpunkt(this.zustand, this.zustandZeit);
-    zeichneSkelett(ctx, this.x, this.y, this.blick, pose);
+    // Hit-Flash: direkt nach einem Treffer färbt sich die Silhouette kurz dunkelrot
+    const flash = this.zustand === 'treffer' && this.zustandZeit < 0.12 ? '#6b1626' : null;
+    zeichneSkelett(ctx, this.x, this.y, this.blick, pose, flash);
   }
 }

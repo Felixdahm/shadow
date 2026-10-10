@@ -1,0 +1,9 @@
+{
+  "name": "schattenpfad-tools",
+  "private": true,
+  "type": "module",
+  "description": "Nur für die Bildgenerierung mit fal. Das Spiel selbst läuft ohne Abhängigkeiten.",
+  "dependencies": {
+    "@fal-ai/client": "^1.2.0"
+  }
+}
