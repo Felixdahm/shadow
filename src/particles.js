@@ -41,6 +41,30 @@ export function spawnSchattenWolke(x, y) {
   }
 }
 
+// Staubwolke bei Landungen und Rollen — gibt Bewegungen Gewicht
+export function spawnStaub(x, y) {
+  for (let i = 0; i < 8; i++) {
+    partikel.push({
+      x: x + (Math.random() - 0.5) * 40,
+      y: y - Math.random() * 8,
+      vx: (Math.random() - 0.5) * 90,
+      vy: -10 - Math.random() * 35,
+      leben: 0.35 + Math.random() * 0.25,
+      alter: 0,
+      groesse: 4 + Math.random() * 5,
+      farbe: 'rgba(169, 158, 194, 0.5)',
+      schwebt: true, // Staub fällt nicht, er verweht
+    });
+  }
+}
+
+// Schwebende Schadenszahlen über Treffern
+const texte = [];
+
+export function spawnSchadenText(x, y, text, farbe, gross = false) {
+  texte.push({ x, y, text, farbe, gross, alter: 0, leben: 0.8, vx: (Math.random() - 0.5) * 36, vy: -95 });
+}
+
 export function updatePartikel(dt) {
   for (let i = partikel.length - 1; i >= 0; i--) {
     const p = partikel[i];
@@ -49,9 +73,20 @@ export function updatePartikel(dt) {
       partikel.splice(i, 1);
       continue;
     }
-    p.vy += 900 * dt; // leichte Schwerkraft
+    if (!p.schwebt) p.vy += 900 * dt; // leichte Schwerkraft (außer Staub)
     p.x += p.vx * dt;
     p.y += p.vy * dt;
+  }
+  for (let i = texte.length - 1; i >= 0; i--) {
+    const t = texte[i];
+    t.alter += dt;
+    if (t.alter >= t.leben) {
+      texte.splice(i, 1);
+      continue;
+    }
+    t.vy *= Math.exp(-2.5 * dt); // Zahl steigt und bremst ab
+    t.x += t.vx * dt;
+    t.y += t.vy * dt;
   }
 }
 
@@ -65,8 +100,24 @@ export function zeichnePartikel(ctx) {
     ctx.fill();
   }
   ctx.globalAlpha = 1;
+
+  // Schadenszahlen obendrauf
+  ctx.textAlign = 'center';
+  for (const t of texte) {
+    const restleben = 1 - t.alter / t.leben;
+    ctx.globalAlpha = Math.min(1, restleben * 1.6);
+    ctx.font = `700 ${t.gross ? 30 : 20}px Cinzel, serif`;
+    ctx.strokeStyle = 'rgba(8, 6, 14, 0.85)';
+    ctx.lineWidth = 4;
+    ctx.strokeText(t.text, t.x, t.y);
+    ctx.fillStyle = t.farbe;
+    ctx.fillText(t.text, t.x, t.y);
+  }
+  ctx.globalAlpha = 1;
+  ctx.textAlign = 'left';
 }
 
 export function leerePartikel() {
   partikel.length = 0;
+  texte.length = 0;
 }

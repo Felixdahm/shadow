@@ -2,7 +2,7 @@ import { CONFIG } from './config.js';
 import { zeichneSkelett } from './skeleton.js';
 import { poseZumZeitpunkt } from './animations.js';
 import { TOUCH_BUTTONS, istGedrueckt, stickZustand, istTouchAktiv } from './input.js';
-import { PORTRAITS, WAFFEN_BILDER, zeichnePortrait } from './bilder.js';
+import { PORTRAITS, WAFFEN_BILDER, KOEPFE, zeichnePortrait } from './bilder.js';
 
 // Tipp-Bereich des MENÜ-/KARTE-Knopfs oben in der Mitte; main.js prüft Taps dagegen
 export const MENUE_KNOPF = { x: 415, y: 50, b: 130, h: 36 };
@@ -49,7 +49,7 @@ function lebensbalken(ctx, x, y, kaempfer, gespiegelt) {
   ctx.fillRect(x, y + BALKEN_HOEHE + 5, BALKEN_BREITE, 7);
   const voll = energieAnteil >= 1;
   const puls = voll ? 0.7 + 0.3 * Math.sin(performance.now() / 120) : 1;
-  ctx.fillStyle = voll ? `rgba(255, 210, 125, ${puls.toFixed(2)})` : '#8a6cc9';
+  ctx.fillStyle = voll ? `rgba(245, 180, 82, ${puls.toFixed(2)})` : '#8a6cc9';
   const eBreite = BALKEN_BREITE * energieAnteil;
   ctx.fillRect(gespiegelt ? x + BALKEN_BREITE - eBreite : x, y + BALKEN_HOEHE + 5, eBreite, 7);
 
@@ -63,7 +63,7 @@ function lebensbalken(ctx, x, y, kaempfer, gespiegelt) {
     const px = gespiegelt ? x + BALKEN_BREITE - 8 - i * 24 : x + 8 + i * 24;
     ctx.beginPath();
     ctx.arc(px, y + BALKEN_HOEHE + 48, 7, 0, Math.PI * 2);
-    ctx.fillStyle = i < kaempfer.rundenSiege ? '#ffd27d' : 'rgba(0, 0, 0, 0.35)';
+    ctx.fillStyle = i < kaempfer.rundenSiege ? '#F5B452' : 'rgba(0, 0, 0, 0.35)';
     ctx.fill();
   }
 }
@@ -74,7 +74,7 @@ function ansage(ctx, text, groesse, zeit, y = 215) {
   ctx.save();
   ctx.translate(CONFIG.canvas.breite / 2, y);
   ctx.scale(skala, skala);
-  ctx.fillStyle = 'rgba(255, 235, 200, 0.95)';
+  ctx.fillStyle = 'rgba(242, 236, 250, 0.95)';
   ctx.font = `bold ${groesse}px system-ui, sans-serif`;
   ctx.textAlign = 'center';
   ctx.fillText(text, 0, 0);
@@ -82,7 +82,7 @@ function ansage(ctx, text, groesse, zeit, y = 215) {
 }
 
 function untertitel(ctx, text, y = 262) {
-  ctx.fillStyle = 'rgba(255, 235, 200, 0.9)';
+  ctx.fillStyle = 'rgba(242, 236, 250, 0.9)';
   ctx.font = '26px system-ui, sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText(text, CONFIG.canvas.breite / 2, y);
@@ -108,7 +108,7 @@ export function zeichneUI(ctx, spiel) {
   {
     const K = MENUE_KNOPF;
     ctx.fillStyle = 'rgba(10, 8, 18, 0.45)';
-    ctx.strokeStyle = 'rgba(255, 210, 125, 0.45)';
+    ctx.strokeStyle = 'rgba(245, 180, 82, 0.45)';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.roundRect(K.x, K.y, K.b, K.h, 10);
@@ -124,8 +124,8 @@ export function zeichneUI(ctx, spiel) {
     const alpha = Math.min(1, spiel.phasenZeit * 3);
     zeichnePortrait(ctx, PORTRAITS.juro, 70, 110, 190, alpha);
     zeichnePortrait(ctx, PORTRAITS[spiel.gegnerId], breite - 70 - 190, 110, 190, alpha);
-    ctx.fillStyle = `rgba(255, 235, 200, ${(alpha * 0.9).toFixed(2)})`;
-    ctx.font = 'bold 40px system-ui, sans-serif';
+    ctx.fillStyle = `rgba(242, 236, 250, ${(alpha * 0.9).toFixed(2)})`;
+    ctx.font = '700 40px Cinzel, serif';
     ctx.textAlign = 'center';
     ctx.fillText('VS', breite / 2, 330);
     if (spiel.phasenZeit < 0.85) {
@@ -145,8 +145,8 @@ export function zeichneUI(ctx, spiel) {
     }
     // Verdiente Schatten-Splitter anzeigen
     if (spiel.belohnung > 0) {
-      ctx.fillStyle = '#ffd27d';
-      ctx.font = 'bold 24px system-ui, sans-serif';
+      ctx.fillStyle = '#F5B452';
+      ctx.font = '700 24px Cinzel, serif';
       ctx.textAlign = 'center';
       ctx.fillText(`+${spiel.belohnung} ◆`, breite / 2, 300);
     }
@@ -159,6 +159,17 @@ export function zeichneUI(ctx, spiel) {
   serieAnzeige(ctx, spiel.spieler, 40, false);
   serieAnzeige(ctx, spiel.gegner, breite - 40, true);
 
+  // Wenig Leben: pulsierender roter Rand als Warnung
+  const hpAnteil = spiel.spieler.hp / spiel.spieler.maxHp;
+  if (!spiel.training && hpAnteil < 0.25 && spiel.spieler.lebt()) {
+    const puls = 0.12 + 0.1 * Math.sin(performance.now() / 160);
+    const g = ctx.createRadialGradient(480, 270, 300, 480, 270, 560);
+    g.addColorStop(0, 'rgba(229, 72, 77, 0)');
+    g.addColorStop(1, `rgba(229, 72, 77, ${puls.toFixed(2)})`);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, breite, CONFIG.canvas.hoehe);
+  }
+
   ctx.textAlign = 'left';
 }
 
@@ -167,7 +178,7 @@ function serieAnzeige(ctx, kaempfer, x, gespiegelt) {
   if (s.anzahl < 2) return;
   // frisch gelandete Treffer lassen die Zahl kurz aufpoppen
   const frisch = Math.max(0, s.timer - (CONFIG.kombo.serienFenster - 0.18)) / 0.18;
-  ctx.fillStyle = `rgba(255, 210, 125, ${(0.65 + 0.35 * frisch).toFixed(2)})`;
+  ctx.fillStyle = `rgba(245, 180, 82, ${(0.65 + 0.35 * frisch).toFixed(2)})`;
   ctx.font = `bold ${Math.round(26 + 8 * frisch)}px system-ui, sans-serif`;
   ctx.textAlign = gespiegelt ? 'right' : 'left';
   ctx.fillText(`${s.anzahl} TREFFER`, x, 125);
@@ -186,7 +197,7 @@ export function zeichneTouchSteuerung(ctx, spieler) {
     ctx.beginPath();
     ctx.arc(stick.x, stick.y, 60, 0, Math.PI * 2);
     ctx.stroke();
-    ctx.fillStyle = 'rgba(255, 235, 200, 0.5)';
+    ctx.fillStyle = 'rgba(242, 236, 250, 0.5)';
     ctx.beginPath();
     ctx.arc(stick.x + stick.dx, stick.y + stick.dy, 26, 0, Math.PI * 2);
     ctx.fill();
@@ -206,15 +217,15 @@ export function zeichneTouchSteuerung(ctx, spieler) {
     const istSpezial = b.code === 'KeyW';
     const bereit = istSpezial && spieler.energie >= CONFIG.spezial.energieMax;
 
-    ctx.fillStyle = gehalten ? 'rgba(255, 235, 200, 0.35)' : bereit ? 'rgba(255, 210, 125, 0.3)' : 'rgba(10, 8, 18, 0.35)';
-    ctx.strokeStyle = bereit ? 'rgba(255, 210, 125, 0.9)' : 'rgba(243, 233, 247, 0.4)';
+    ctx.fillStyle = gehalten ? 'rgba(242, 236, 250, 0.35)' : bereit ? 'rgba(245, 180, 82, 0.3)' : 'rgba(10, 8, 18, 0.35)';
+    ctx.strokeStyle = bereit ? 'rgba(245, 180, 82, 0.9)' : 'rgba(243, 233, 247, 0.4)';
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.roundRect(b.x, b.y, b.b, b.h, 14);
     ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle = bereit ? '#ffd27d' : 'rgba(243, 233, 247, 0.85)';
+    ctx.fillStyle = bereit ? '#F5B452' : 'rgba(243, 233, 247, 0.85)';
     const istSymbol = b.label.length === 1;
     ctx.font = istSymbol ? '30px system-ui, sans-serif' : 'bold 13px system-ui, sans-serif';
     ctx.fillText(b.label, b.x + b.b / 2, b.y + b.h / 2 + (istSymbol ? 11 : 5));
@@ -227,9 +238,9 @@ export function zeichnePanel(ctx, eintraege, auswahl, splitter) {
   // Spielfeld abdunkeln, Panel links
   ctx.fillStyle = 'rgba(5, 4, 12, 0.5)';
   ctx.fillRect(0, 0, CONFIG.canvas.breite, CONFIG.canvas.hoehe);
-  ctx.fillStyle = 'rgba(14, 10, 24, 0.97)';
+  ctx.fillStyle = 'rgba(16, 11, 26, 0.97)';
   ctx.fillRect(0, 0, 334, CONFIG.canvas.hoehe);
-  ctx.strokeStyle = 'rgba(255, 210, 125, 0.5)';
+  ctx.strokeStyle = 'rgba(245, 180, 82, 0.5)';
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(334, 0);
@@ -237,24 +248,24 @@ export function zeichnePanel(ctx, eintraege, auswahl, splitter) {
   ctx.stroke();
 
   ctx.textAlign = 'left';
-  ctx.fillStyle = 'rgba(255, 235, 200, 0.97)';
-  ctx.font = 'bold 28px system-ui, sans-serif';
+  ctx.fillStyle = 'rgba(242, 236, 250, 0.97)';
+  ctx.font = '700 28px Cinzel, serif';
   ctx.fillText('SCHATTENPFAD', 24, 60);
-  ctx.fillStyle = '#ffd27d';
+  ctx.fillStyle = '#F5B452';
   ctx.font = 'bold 19px system-ui, sans-serif';
   ctx.fillText(`◆ ${splitter}`, 24, 95);
 
   eintraege.forEach((eintrag, i) => {
     const r = PANEL_EINTRAG(i);
     const gewaehlt = i === auswahl;
-    ctx.fillStyle = gewaehlt ? 'rgba(255, 210, 125, 0.14)' : 'rgba(255, 255, 255, 0.03)';
-    ctx.strokeStyle = gewaehlt ? 'rgba(255, 210, 125, 0.85)' : 'rgba(243, 233, 247, 0.25)';
+    ctx.fillStyle = gewaehlt ? 'rgba(245, 180, 82, 0.14)' : 'rgba(255, 255, 255, 0.03)';
+    ctx.strokeStyle = gewaehlt ? 'rgba(245, 180, 82, 0.85)' : 'rgba(243, 233, 247, 0.25)';
     ctx.lineWidth = gewaehlt ? 2 : 1.2;
     ctx.beginPath();
     ctx.roundRect(r.x, r.y, r.b, r.h, 12);
     ctx.fill();
     ctx.stroke();
-    ctx.fillStyle = gewaehlt ? '#ffd27d' : 'rgba(243, 233, 247, 0.85)';
+    ctx.fillStyle = gewaehlt ? '#F5B452' : 'rgba(243, 233, 247, 0.85)';
     ctx.font = gewaehlt ? 'bold 19px system-ui, sans-serif' : '18px system-ui, sans-serif';
     ctx.fillText(eintrag, r.x + 18, r.y + 32);
   });
@@ -273,8 +284,8 @@ export function zeichneWeltKarte(ctx, daten) {
   zeichneSplitter(ctx, splitter);
 
   ctx.textAlign = 'center';
-  ctx.fillStyle = 'rgba(255, 235, 200, 0.97)';
-  ctx.font = 'bold 32px system-ui, sans-serif';
+  ctx.fillStyle = 'rgba(242, 236, 250, 0.97)';
+  ctx.font = '700 32px Cinzel, serif';
   ctx.fillText(`WELT ${welt} — DER SCHATTENPFAD`, breite / 2, 70);
 
   // Zurück-Knopf
@@ -295,7 +306,7 @@ export function zeichneWeltKarte(ctx, daten) {
   const abstand = 165;
   const startX = breite / 2 - ((n - 1) * abstand) / 2;
   const knotenY = 150;
-  ctx.strokeStyle = 'rgba(255, 210, 125, 0.3)';
+  ctx.strokeStyle = 'rgba(245, 180, 82, 0.3)';
   ctx.lineWidth = 3;
   ctx.beginPath();
   ctx.moveTo(startX, knotenY + 55);
@@ -314,7 +325,7 @@ export function zeichneWeltKarte(ctx, daten) {
 
     // Status-Rahmen: besiegt = gold, offen = pulsierend, gesperrt = Schloss
     if (e.status === 'besiegt') {
-      ctx.strokeStyle = '#ffd27d';
+      ctx.strokeStyle = '#F5B452';
       ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.roundRect(px, py, groesse, groesse, 14);
@@ -326,14 +337,14 @@ export function zeichneWeltKarte(ctx, daten) {
     }
     if (i === auswahl) {
       const puls = 4 + 2 * Math.sin(performance.now() / 160);
-      ctx.strokeStyle = 'rgba(255, 235, 200, 0.95)';
+      ctx.strokeStyle = 'rgba(242, 236, 250, 0.95)';
       ctx.lineWidth = 3.5;
       ctx.beginPath();
       ctx.roundRect(px - puls, py - puls, groesse + puls * 2, groesse + puls * 2, 18);
       ctx.stroke();
     }
 
-    ctx.fillStyle = i === auswahl ? '#ffd27d' : 'rgba(243, 233, 247, 0.75)';
+    ctx.fillStyle = i === auswahl ? '#F5B452' : 'rgba(243, 233, 247, 0.75)';
     ctx.font = `${i === auswahl ? 'bold ' : ''}15px system-ui, sans-serif`;
     ctx.fillText(istBoss ? `★ ${e.name}` : e.name, px + groesse / 2, py + groesse + 24);
   }
@@ -393,7 +404,7 @@ TITELBILD.img.src = 'assets/ui/titelbild.png';
 
 // Splitter-Kontostand oben rechts (Menü-Bildschirme)
 function zeichneSplitter(ctx, splitter) {
-  ctx.fillStyle = '#ffd27d';
+  ctx.fillStyle = '#F5B452';
   ctx.font = 'bold 20px system-ui, sans-serif';
   ctx.textAlign = 'right';
   ctx.fillText(`◆ ${splitter}`, CONFIG.canvas.breite - 36, 42);
@@ -414,8 +425,8 @@ export function zeichneMenue(ctx, eintraege, auswahl, zeit, splitter) {
   ctx.save();
   ctx.translate(mitte, 150);
   ctx.scale(skala, skala);
-  ctx.fillStyle = 'rgba(255, 235, 200, 0.97)';
-  ctx.font = 'bold 76px system-ui, sans-serif';
+  ctx.fillStyle = 'rgba(242, 236, 250, 0.97)';
+  ctx.font = '700 76px Cinzel, serif';
   ctx.textAlign = 'center';
   ctx.fillText('SCHATTENPFAD', 0, 0);
   ctx.restore();
@@ -423,8 +434,8 @@ export function zeichneMenue(ctx, eintraege, auswahl, zeit, splitter) {
   ctx.textAlign = 'center';
   eintraege.forEach((eintrag, i) => {
     const gewaehlt = i === auswahl;
-    ctx.fillStyle = gewaehlt ? '#ffd27d' : 'rgba(243, 233, 247, 0.75)';
-    ctx.font = gewaehlt ? 'bold 28px system-ui, sans-serif' : '25px system-ui, sans-serif';
+    ctx.fillStyle = gewaehlt ? '#F5B452' : 'rgba(243, 233, 247, 0.75)';
+    ctx.font = gewaehlt ? '700 28px Cinzel, serif' : '25px system-ui, sans-serif';
     ctx.fillText(gewaehlt ? `▸ ${eintrag} ◂` : eintrag, mitte, 240 + i * 44);
   });
 
@@ -442,8 +453,8 @@ export function zeichneAusruestung(ctx, daten) {
   zeichneSplitter(ctx, spielstand.splitter);
 
   ctx.textAlign = 'center';
-  ctx.fillStyle = 'rgba(255, 235, 200, 0.95)';
-  ctx.font = 'bold 34px system-ui, sans-serif';
+  ctx.fillStyle = 'rgba(242, 236, 250, 0.95)';
+  ctx.font = '700 34px Cinzel, serif';
   ctx.fillText('AUSRÜSTUNG', mitte, 90);
 
   // Juro-Vorschau rechts — zeigt sofort die gerade angewählte Kombination,
@@ -453,7 +464,8 @@ export function zeichneAusruestung(ctx, daten) {
   zeichneSkelett(ctx, 810, CONFIG.physik.bodenY, -1, pose, {
     waffe: waffenEintrag.id,
     extras: [stilEintrag.id],
-    farben: { haut: '#e8b48a', oben: '#2c3a5e', unten: '#1f2a45', akzent: '#c43b3b' },
+    farben: { haut: '#e8b48a', oben: '#2c3a5e', unten: '#1f2a45', akzent: '#c43b3b', haar: '#222b3f' },
+    kopfBild: KOEPFE.juro,
   });
 
   const reihe = (y, label, eintrag, aktiv) => {
@@ -464,8 +476,8 @@ export function zeichneAusruestung(ctx, daten) {
     ctx.font = 'bold 15px system-ui, sans-serif';
     ctx.fillText(label, 330, y - 38);
 
-    ctx.fillStyle = aktiv ? '#ffd27d' : 'rgba(243, 233, 247, 0.85)';
-    ctx.font = aktiv ? 'bold 32px system-ui, sans-serif' : '28px system-ui, sans-serif';
+    ctx.fillStyle = aktiv ? '#F5B452' : 'rgba(243, 233, 247, 0.85)';
+    ctx.font = aktiv ? '700 32px Cinzel, serif' : '28px system-ui, sans-serif';
     ctx.fillText(`◂  ${eintrag.name}  ▸`, 330, y);
 
     ctx.font = '16px system-ui, sans-serif';
@@ -476,7 +488,7 @@ export function zeichneAusruestung(ctx, daten) {
       ctx.fillStyle = 'rgba(243, 233, 247, 0.7)';
       ctx.fillText('Enter: ausrüsten', 330, y + 30);
     } else if (spielstand.splitter >= eintrag.preis) {
-      ctx.fillStyle = '#ffd27d';
+      ctx.fillStyle = '#F5B452';
       ctx.fillText(`Enter: kaufen für ${eintrag.preis} ◆`, 330, y + 30);
     } else {
       ctx.fillStyle = '#e06046';
@@ -519,18 +531,18 @@ function zeichneKarte(ctx, karte, y) {
 
     ctx.beginPath();
     ctx.arc(px, y, aktuell ? 10 : 8, 0, Math.PI * 2);
-    ctx.fillStyle = geschafft ? '#ffd27d' : aktuell ? '#f3e9f7' : 'rgba(10, 8, 18, 0.7)';
+    ctx.fillStyle = geschafft ? '#F5B452' : aktuell ? '#f3e9f7' : 'rgba(10, 8, 18, 0.7)';
     ctx.fill();
     if (aktuell) {
       const puls = 12 + 3 * Math.sin(performance.now() / 180);
-      ctx.strokeStyle = 'rgba(255, 210, 125, 0.8)';
+      ctx.strokeStyle = 'rgba(245, 180, 82, 0.8)';
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.arc(px, y, puls, 0, Math.PI * 2);
       ctx.stroke();
     }
 
-    ctx.fillStyle = aktuell ? '#ffd27d' : 'rgba(243, 233, 247, 0.6)';
+    ctx.fillStyle = aktuell ? '#F5B452' : 'rgba(243, 233, 247, 0.6)';
     ctx.font = aktuell ? 'bold 13px system-ui, sans-serif' : '13px system-ui, sans-serif';
     ctx.fillText(karte.stationen[i], px, y + 30);
   }
@@ -541,8 +553,8 @@ export function zeichneStory(ctx, text, karte, portraitId) {
   schleier(ctx, 0.68);
 
   ctx.textAlign = 'center';
-  ctx.fillStyle = 'rgba(255, 235, 200, 0.95)';
-  ctx.font = 'bold 30px system-ui, sans-serif';
+  ctx.fillStyle = 'rgba(242, 236, 250, 0.95)';
+  ctx.font = '700 30px Cinzel, serif';
   ctx.fillText('DER SCHATTENPFAD', mitte, 110);
 
   if (karte) zeichneKarte(ctx, karte, 165);
@@ -570,8 +582,8 @@ export function zeichneGegnerWahl(ctx, charakter, zeit, portraitId) {
   schleier(ctx, 0.35);
 
   ctx.textAlign = 'center';
-  ctx.fillStyle = 'rgba(255, 235, 200, 0.95)';
-  ctx.font = 'bold 34px system-ui, sans-serif';
+  ctx.fillStyle = 'rgba(242, 236, 250, 0.95)';
+  ctx.font = '700 34px Cinzel, serif';
   ctx.fillText('FREIER KAMPF', mitte, 110);
 
   // Portrait links, daneben steht der Gegner atmend in seiner eigenen Arena
@@ -583,10 +595,11 @@ export function zeichneGegnerWahl(ctx, charakter, zeit, portraitId) {
     waffe: charakter.waffe,
     extras: charakter.extras,
     farben: charakter.farben,
+    kopfBild: KOEPFE[portraitId] ?? null,
   });
 
-  ctx.fillStyle = '#ffd27d';
-  ctx.font = 'bold 30px system-ui, sans-serif';
+  ctx.fillStyle = '#F5B452';
+  ctx.font = '700 30px Cinzel, serif';
   ctx.fillText(`◂  ${charakter.name}  ▸`, mitte, 180);
   ctx.fillStyle = 'rgba(243, 233, 247, 0.8)';
   ctx.font = '19px system-ui, sans-serif';

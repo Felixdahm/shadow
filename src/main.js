@@ -12,7 +12,7 @@ import {
   zeichnePanel, zeichneWeltKarte, zeichneVignette,
   MENUE_KNOPF, ZURUECK_KNOPF, PANEL_EINTRAG,
 } from './ui.js';
-import { spawnTrefferFunken, updatePartikel, zeichnePartikel, leerePartikel } from './particles.js';
+import { spawnTrefferFunken, spawnSchadenText, updatePartikel, zeichnePartikel, leerePartikel } from './particles.js';
 import { spieleTreffer, spieleBlock, spieleKo, spieleGong, spieleSpezialTreffer, setzeEffekte } from './sound.js';
 import { setzeMusik, setzeMusikAn } from './music.js';
 
@@ -107,6 +107,8 @@ function kampfGeruest(gegnerDaten, gegnerId) {
     istDojo: false,
     training: false,
     trainingModus: 0,
+    zeitlupe: 0, // K.O.-Zeitlupe
+    blitz: 0,    // kurzer Screen-Flash bei Finisher/Spezial
   };
 }
 
@@ -364,6 +366,11 @@ function updateKampf(dt) {
     return;
   }
 
+  // K.O.-Zeitlupe: nach dem finalen Treffer läuft alles kurz auf 30 % Tempo
+  spiel.blitz = Math.max(0, spiel.blitz - dt);
+  const simDt = spiel.zeitlupe > 0 ? dt * 0.3 : dt;
+  spiel.zeitlupe = Math.max(0, spiel.zeitlupe - dt);
+
   const { spieler, gegner } = spiel;
   const kampfAktiv = spiel.phase === 'kampf';
 
@@ -374,13 +381,13 @@ function updateKampf(dt) {
     else if (spiel.trainingModus === 1) gegnerEingabe.block = true;
   }
 
-  spieler.update(dt, kampfAktiv ? spielerEingabe() : leereEingabe(), gegner);
-  gegner.update(dt, gegnerEingabe, spieler);
+  spieler.update(simDt, kampfAktiv ? spielerEingabe() : leereEingabe(), gegner);
+  gegner.update(simDt, gegnerEingabe, spieler);
 
-  wendePhysikAn(spieler, dt);
-  wendePhysikAn(gegner, dt);
+  wendePhysikAn(spieler, simDt);
+  wendePhysikAn(gegner, simDt);
   trenneKaempfer(spieler, gegner);
-  updatePartikel(dt);
+  updatePartikel(simDt);
 
   if (spiel.phase === 'intro') {
     if (spiel.phasenZeit >= CONFIG.runden.introDauer) {
@@ -397,6 +404,14 @@ function updateKampf(dt) {
       kamera.shake = Math.max(kamera.shake, e.ko ? G.shakeKo : wuchtig ? 12 : e.blockt ? G.shakeBlock : G.shakeTreffer);
       if (e.ko) kamera.zoom = 1.1;
       else if (wuchtig && !e.blockt) kamera.zoom = 1.06;
+      // Schwebende Schadenszahl über dem Getroffenen
+      spawnSchadenText(
+        e.x, e.y - 36, `${e.schaden}`,
+        e.blockt ? '#A99EC2' : wuchtig ? '#F5B452' : '#F2ECFA',
+        wuchtig || e.ko,
+      );
+      if (e.ko) spiel.zeitlupe = 0.9;
+      if (wuchtig && !e.blockt) spiel.blitz = 0.12;
       if (e.ko) spieleKo();
       else if (wuchtig && !e.blockt) spieleSpezialTreffer();
       else if (e.blockt) spieleBlock();
@@ -514,6 +529,13 @@ function renderKampf() {
   ctx.restore();
 
   zeichneVignette(ctx);
+
+  // Screen-Flash bei wuchtigen Treffern
+  if (spiel.blitz > 0) {
+    ctx.fillStyle = `rgba(245, 220, 170, ${(spiel.blitz / 0.12 * 0.3).toFixed(2)})`;
+    ctx.fillRect(0, 0, CONFIG.canvas.breite, CONFIG.canvas.hoehe);
+  }
+
   zeichneUI(ctx, spiel); // UI wackelt nicht mit
 
   if (istTouchAktiv() && !panelOffen) zeichneTouchSteuerung(ctx, spiel.spieler);
@@ -587,5 +609,6 @@ function schleife(jetzt) {
 }
 
 aktiviereTouch(canvas);
+document.fonts?.load('700 40px Cinzel'); // Display-Schrift vorladen
 zumDojo(); // Das Spiel beginnt im Dojo — wie bei den Großen
 requestAnimationFrame(schleife);

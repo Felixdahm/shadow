@@ -23,7 +23,7 @@ const WAFFEN_FARBEN = {
 // optionen: { einfaerbung, skalierung, waffe, extras, farben }
 // farben = { haut, oben, unten, akzent, haar? }
 export function zeichneSkelett(ctx, x, fussY, blick, pose, optionen = {}) {
-  const { einfaerbung = null, skalierung = 1, waffe = null, extras = [], farben = null } = optionen;
+  const { einfaerbung = null, skalierung = 1, waffe = null, extras = [], farben = null, kopfBild = null } = optionen;
   const s = CONFIG.skelett;
   const sk = skalierung;
   const hx = x;
@@ -43,6 +43,13 @@ export function zeichneSkelett(ctx, x, fussY, blick, pose, optionen = {}) {
     ctx.moveTo(ax, ay);
     ctx.lineTo(bx, by);
     ctx.stroke();
+  };
+
+  // Gliedmaße mit Tiefe: dunkle Kontur unter der eigentlichen Farbe —
+  // das gibt den Armen und Beinen Körper statt Strich-Optik.
+  const glied = (ax, ay, bx, by, breite, farbe) => {
+    knochen(ax, ay, bx, by, breite + 3.5, einfaerbung ?? 'rgba(8, 6, 14, 0.6)');
+    knochen(ax, ay, bx, by, breite, farbe);
   };
 
   const kreis = (cx, cy, r, farbe) => {
@@ -93,8 +100,8 @@ export function zeichneSkelett(ctx, x, fussY, blick, pose, optionen = {}) {
     const [ex, ey] = ende(sx, sy, schulter, s.oberarm);
     const unterarmWinkel = schulter + ellbogen;
     const [wx, wy] = ende(ex, ey, unterarmWinkel, s.unterarm);
-    knochen(sx, sy, ex, ey, s.linienBreite, farbe);
-    knochen(ex, ey, wx, wy, s.linienBreite, farbe);
+    glied(sx, sy, ex, ey, s.linienBreite, farbe);
+    glied(ex, ey, wx, wy, s.linienBreite, farbe);
     kreis(wx, wy, s.linienBreite * 0.55 * sk, faustFarbe); // Faust
     if (mitWaffe && waffe) zeichneWaffe(wx, wy, unterarmWinkel);
   };
@@ -103,8 +110,8 @@ export function zeichneSkelett(ctx, x, fussY, blick, pose, optionen = {}) {
     // Das Knie beugt nach hinten, deshalb wird der Knie-Winkel abgezogen.
     const [ex, ey] = ende(hx, hy, huefte, s.oberschenkel);
     const [fx, fy] = ende(ex, ey, huefte - knie, s.unterschenkel);
-    knochen(hx, hy, ex, ey, s.linienBreite * 1.1, farbe);
-    knochen(ex, ey, fx, fy, s.linienBreite * 1.1, farbe);
+    glied(hx, hy, ex, ey, s.linienBreite * 1.1, farbe);
+    glied(ex, ey, fx, fy, s.linienBreite * 1.1, farbe);
     knochen(fx, fy, fx + blick * 9 * sk, fy, s.linienBreite * 0.9, schuhFarbe); // Schuh
   };
 
@@ -133,27 +140,38 @@ export function zeichneSkelett(ctx, x, fussY, blick, pose, optionen = {}) {
   // Gürtel an der Hüfte
   knochen(hx - qx * hueftBreite * 1.15, hy - qy * hueftBreite * 1.15, hx + qx * hueftBreite * 1.15, hy + qy * hueftBreite * 1.15, 4.5, F.akzent);
 
-  // ---- Kopf mit Haar ----
-  kreis(kx, ky, s.kopfRadius * sk, F.haut);
-  if (F.haar) {
-    ctx.fillStyle = F.haar;
-    ctx.beginPath();
-    ctx.arc(kx, ky - 1 * sk, s.kopfRadius * sk * 1.05, Math.PI * 0.95, Math.PI * 2.05);
-    ctx.fill();
+  // ---- Kopf: gemaltes fal-Kopfbild am Skelett (dreht sich mit) — oder Fallback ----
+  if (kopfBild?.bereit && !einfaerbung) {
+    const g = s.kopfRadius * sk * 4.6; // die Bilder enthalten Haare/Kapuzen → größer als der Kopfkreis
+    ctx.save();
+    ctx.translate(kx, ky);
+    ctx.rotate((pose.rumpf + pose.kopf) * 0.5 * blick);
+    ctx.scale(blick * (kopfBild.spiegeln ? -1 : 1), 1);
+    ctx.drawImage(kopfBild.canvas, -g / 2, -g * 0.45, g, g);
+    ctx.restore();
+  } else {
+    kreis(kx, ky, s.kopfRadius * sk, F.haut);
+    if (F.haar) {
+      ctx.fillStyle = F.haar;
+      ctx.beginPath();
+      ctx.arc(kx, ky - 1 * sk, s.kopfRadius * sk * 1.05, Math.PI * 0.95, Math.PI * 2.05);
+      ctx.fill();
+    }
   }
 
-  // ---- Extras (in der Akzentfarbe) ----
+  // ---- Extras (in der Akzentfarbe; Kopf-Details nur ohne gemalten Kopf) ----
   const vorn = F.akzent;
-  if (extras.includes('stirnband')) {
+  const kopfGemalt = kopfBild?.bereit && !einfaerbung;
+  if (!kopfGemalt && extras.includes('stirnband')) {
     const bx = kx - blick * s.kopfRadius * sk;
     knochen(bx, ky, bx - blick * 16 * sk, ky + 4 * sk, 3, vorn);
     knochen(bx, ky, bx - blick * 13 * sk, ky + 10 * sk, 3, vorn);
   }
-  if (extras.includes('zopf')) {
+  if (!kopfGemalt && extras.includes('zopf')) {
     const bx = kx - blick * s.kopfRadius * 0.6 * sk;
     knochen(bx, ky - 6 * sk, bx - blick * 11 * sk, ky + 14 * sk, 5, vorn);
   }
-  if (extras.includes('irokese')) {
+  if (!kopfGemalt && extras.includes('irokese')) {
     // drei kurze Stachel auf dem Kopf
     for (let i = -1; i <= 1; i++) {
       knochen(
@@ -163,7 +181,7 @@ export function zeichneSkelett(ctx, x, fussY, blick, pose, optionen = {}) {
       );
     }
   }
-  if (extras.includes('kapuze')) {
+  if (!kopfGemalt && extras.includes('kapuze')) {
     ctx.fillStyle = vorn;
     ctx.beginPath();
     ctx.moveTo(kx - blick * (s.kopfRadius + 7) * sk, ky + 7 * sk);

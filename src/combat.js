@@ -113,5 +113,6 @@ function pruefeTreffer(angreifer, ziel, ereignisse) {
     wurf: istWurf,
     finisher,
     serie: angreifer.trefferSerie.anzahl,
+    schaden,
   });
 }

@@ -2,7 +2,8 @@ import { CONFIG } from './config.js';
 import { poseZumZeitpunkt, mischePosen, weich, sprungPose } from './animations.js';
 import { zeichneSkelett } from './skeleton.js';
 import { spieleSchwung, spieleSpezialStart, spieleTeleport } from './sound.js';
-import { spawnSchattenWolke } from './particles.js';
+import { spawnSchattenWolke, spawnStaub } from './particles.js';
+import { KOEPFE } from './bilder.js';
 
 export class Kaempfer {
   constructor(charakter, x, blick) {
@@ -42,6 +43,8 @@ export class Kaempfer {
     this.letztePose = null;
     this.uebergangVon = null;
     this.uebergangZeit = 1;
+    this.spur = [];      // Nachbilder bei Rolle/Salto/Sturm/Spezial
+    this.spurTimer = 0;
   }
 
   amBoden() {
@@ -183,9 +186,20 @@ export class Kaempfer {
       return;
     }
 
+    // Nachbilder: schnelle Bewegungen ziehen eine Geister-Spur hinter sich her
+    const zieht = ['rolle', 'salto', 'sturm', 'spezial'].includes(this.zustand);
+    this.spurTimer -= dt;
+    if (zieht && this.spurTimer <= 0 && this.letztePose) {
+      this.spur.push({ x: this.x, y: this.y, blick: this.blick, pose: this.letztePose });
+      if (this.spur.length > 4) this.spur.shift();
+      this.spurTimer = 0.045;
+    } else if (!zieht && this.spur.length) {
+      this.spur.shift();
+    }
+
     if (this.zustand === 'luftTritt') {
       // Flugkick: Schwung aus dem Sprung bleibt, Schwerkraft wirkt weiter
-      if (this.amBoden() && this.vy >= 0) this.wechsle('stehen');
+      if (this.amBoden() && this.vy >= 0) { spawnStaub(this.x, CONFIG.physik.bodenY); this.wechsle('stehen'); }
       return;
     }
 
@@ -203,7 +217,7 @@ export class Kaempfer {
       } else {
         this.vx = this.saltoRichtung * this.tempo * 1.15;
       }
-      if (this.amBoden() && this.vy >= 0) this.wechsle('stehen');
+      if (this.amBoden() && this.vy >= 0) { spawnStaub(this.x, CONFIG.physik.bodenY); this.wechsle('stehen'); }
       return;
     }
 
@@ -279,6 +293,7 @@ export class Kaempfer {
     } else if (eingabe.ducken && (eingabe.links || eingabe.rechts)) {
       // Schräg nach unten → Rolle in diese Richtung
       this.rolleRichtung = eingabe.rechts ? 1 : -1;
+      spawnStaub(this.x, CONFIG.physik.bodenY);
       this.wechsle('rolle');
     } else if (eingabe.block) {
       if (this.zustand !== 'block') this.wechsle('block');
@@ -293,6 +308,17 @@ export class Kaempfer {
   }
 
   zeichne(ctx) {
+    // Geister-Spur (Nachbilder) hinter schnellen Bewegungen
+    for (let i = 0; i < this.spur.length; i++) {
+      const g = this.spur[i];
+      ctx.globalAlpha = 0.08 + 0.05 * i;
+      zeichneSkelett(ctx, g.x, g.y, g.blick, g.pose, {
+        einfaerbung: '#8A5CF6',
+        skalierung: this.skalierung,
+      });
+    }
+    ctx.globalAlpha = 1;
+
     // Bodenschatten, damit die Figur nicht "schwebt"
     ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
     ctx.beginPath();
@@ -357,6 +383,7 @@ export class Kaempfer {
       waffe: this.charakter.waffe,
       extras: this.charakter.extras,
       farben: this.charakter.farben ?? null,
+      kopfBild: KOEPFE[this.name.toLowerCase()] ?? null,
     });
 
     if (dreht) ctx.restore();
