@@ -25,21 +25,51 @@
     canvas {
       box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
       border-radius: 6px;
-      /* Passt sich dem Bildschirm an, behält aber das 16:9-Format */
+      /* Passt sich dem Bildschirm an, behält aber das 16:9-Format.
+         dvh = sichtbare Höhe OHNE Browser-Leisten (wichtig am Handy). */
       width: min(100vw, calc(100vh * 16 / 9), 960px);
+      width: min(100vw, calc(100dvh * 16 / 9), 960px);
       height: auto;
       touch-action: none;
     }
     p { font-size: 14px; opacity: 0.8; padding: 0 12px; text-align: center; }
-    /* Auf Touch-Geräten die Tastatur-Hinweise ausblenden */
+
+    /* Hinweis-Overlay: erscheint nur am Handy im Hochformat */
+    #drehhinweis {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(8, 6, 16, 0.92);
+      z-index: 10;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      text-align: center;
+      padding: 24px;
+      pointer-events: none; /* Tipps gehen durch — so kann Android direkt ins Vollbild */
+    }
+    #drehhinweis .symbol { font-size: 64px; animation: drehen 1.6s ease-in-out infinite; }
+    #drehhinweis .text { font-size: 20px; color: #f3e9f7; max-width: 300px; }
+    @keyframes drehen {
+      0%, 25% { transform: rotate(0deg); }
+      60%, 100% { transform: rotate(90deg); }
+    }
     @media (hover: none) and (pointer: coarse) {
-      p { display: none; }
+      p { display: none; } /* Tastatur-Hinweise am Handy ausblenden */
+      @media (orientation: portrait) {
+        #drehhinweis { display: flex; }
+      }
     }
   </style>
 </head>
 <body>
   <canvas id="spiel" width="960" height="540"></canvas>
   <p>← → laufen &nbsp;·&nbsp; ↑ springen &nbsp;·&nbsp; ↓ ducken &nbsp;·&nbsp; A Schlag &nbsp;·&nbsp; S Tritt &nbsp;·&nbsp; D blocken &nbsp;·&nbsp; W Spezial &nbsp;·&nbsp; R Revanche &nbsp;·&nbsp; Enter Auswahl &nbsp;·&nbsp; Esc Menü</p>
+  <div id="drehhinweis">
+    <div class="symbol">📱</div>
+    <div class="text">Dreh dein Handy ins Querformat, um zu kämpfen</div>
+  </div>
   <script type="module" src="src/main.js"></script>
 </body>
 </html>

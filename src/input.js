@@ -57,6 +57,21 @@ export function verbraucheTap() {
   return t;
 }
 
+// Beim ersten Tipp: Vollbild anfordern und das Querformat sperren.
+// Funktioniert auf Android-Browsern; iOS (iPhone) unterstützt das nicht —
+// dort zeigt das Overlay in index.html den "Bitte drehen"-Hinweis.
+let vollbildVersucht = false;
+async function vollbildUndQuerformat() {
+  if (vollbildVersucht) return;
+  vollbildVersucht = true;
+  try {
+    await document.documentElement.requestFullscreen?.();
+  } catch { /* nicht unterstützt — macht nichts */ }
+  try {
+    await screen.orientation?.lock?.('landscape');
+  } catch { /* nicht unterstützt — macht nichts */ }
+}
+
 export function aktiviereTouch(canvas) {
   // Browser-Koordinaten → Canvas-Koordinaten (das Canvas wird per CSS skaliert)
   const umrechnen = (touch) => {
@@ -70,6 +85,7 @@ export function aktiviereTouch(canvas) {
   canvas.addEventListener('touchstart', (ev) => {
     ev.preventDefault();
     touchAktiv = true;
+    vollbildUndQuerformat();
     for (const t of ev.changedTouches) {
       const { x, y } = umrechnen(t);
       const button = TOUCH_BUTTONS.find((b) => x >= b.x && x <= b.x + b.b && y >= b.y && y <= b.y + b.h);
