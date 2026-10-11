@@ -1,13 +1,16 @@
 Projekt: SCHATTENPFAD — ein 2D-Silhouetten-Kampfspiel
 
 Worum es geht
-Schattenpfad ist kein Test- oder Lernprojekt mehr. Ziel ist ein richtig gutes, veröffentlichbares Spiel: ein 2D-Kampfspiel im Geist von Shadow Fight 2 — schwarze Silhouetten-Kämpfer vor atmosphärischen Arenen, präzises Kampfgefühl, eigene Welt und Geschichte. Es soll sich auf dem Handy und am PC gleich gut spielen und Leute freiwillig zurückkommen lassen.
+Schattenpfad ist kein Test- oder Lernprojekt mehr. Ziel ist ein richtig gutes, veröffentlichbares Spiel: ein 2D-Kampfspiel im Geist von Shadow Fight 2 — schwarze Silhouetten-Kämpfer vor atmosphärischen Arenen, präzises Kampfgefühl, eigene Welt und Geschichte.
+
+HANDY ZUERST: Das Spiel ist ein Handy-Spiel (Querformat, Touch). Jede Entscheidung — Steuerung, UI-Größen, Lesbarkeit, Performance — wird fürs Handy getroffen und dort beurteilt. Der PC (Tastatur) bleibt voll spielbar, dient aber vor allem dem schnellen Testen während der Entwicklung.
 
 Eigenes Werk: eigener Name, eigene Figuren, eigene Welt. Nichts aus Shadow Fight oder anderen Spielen übernehmen oder imitieren, was Namen, Figuren und Grafiken angeht.
 
 Qualitätsanspruch (der Maßstab für jede Änderung)
 Spielgefühl zuerst. Jede Mechanik muss sich gut ANFÜHLEN, bevor sie fertig ist: Treffer-Feedback, Timing, Lesbarkeit der Animationen. Im Zweifel lieber eine Sache poliert als zwei Sachen halb.
-Kein Feature ohne Feinschliff. Neu eingebaute Mechanik = eingebaut + ausbalanciert + mit Sound/Partikeln/Animation versehen + auf Touch UND Tastatur getestet.
+Kein Feature ohne Feinschliff. Neu eingebaute Mechanik = eingebaut + ausbalanciert + mit Sound/Partikeln/Animation versehen. Maßstab ist die Touch-Bedienung am Handy; Tastatur muss funktionieren (fürs Testen am PC), wird aber nicht extra poliert.
+Daumen-Regeln fürs Handy: Buttons und Joystick groß genug für Daumen, nichts Wichtiges unter den Fingern verstecken, UI-Texte auf Handy-Größe lesbar, keine Hover-Effekte, alles mit maximal zwei Daumen bedienbar.
 Lesbarkeit im Kampf. Der Spieler muss jederzeit erkennen können, was der Gegner tut und was er selbst tun kann (Ausholen sichtbar, Zustände klar unterscheidbar).
 Performance: stabil 60 fps auch auf mittleren Handys. Keine Speicherlecks (Partikel, Bilder, Audio).
 Code bleibt wartbar: klare Module, sprechende Namen, deutsche Warum-Kommentare, alle Balancing-Werte in src/config.js.
@@ -47,7 +50,7 @@ Design-Grundsätze
 Look: Kämpfer sind reine schwarze Silhouetten aus Code (Skelett + dicke runde Linien). Keine Sprites für Figuren. Hintergründe farbig-atmosphärisch in Parallax-Ebenen; jede Arena hat eine eigene Farbwelt. Vordergrund-Elemente ebenfalls Silhouetten.
 Figuren: unterscheiden sich über Umriss (Proportionen, Extras, Waffe) und Datenwerte; Persönlichkeit zeigt sich in Animation und KI-Stil.
 Kampf: Jeder Angriff hat Ausholen → aktiv → Erholen. Leicht = schnell/schwach, schwer = langsam/stark/mehr Reichweite. Treffer brauchen Feedback (Hitstop, Rückstoß, Kamera, Funken, Sound). Ausweichen (Rolle, Salto, Ducken) muss sich immer lohnenswert anfühlen, aber riskant bleiben.
-Steuerung: Tastatur (←→↑↓ + Schräglagen für Rolle/Salto, A Schlag, S Tritt, D Block, W Spezial) und Touch (Joystick links, 4 Buttons rechts). Beide gleichwertig gut.
+Steuerung: Touch ist die Haupt-Steuerung (Joystick links, 4 Buttons rechts) und muss sich erstklassig anfühlen. Tastatur (←→↑↓ + Schräglagen für Rolle/Salto, A Schlag, S Tritt, D Block, W Spezial) ist die Test-Steuerung am PC.
 
 Bilder mit fal generieren
 Für Hintergründe, Titelbild, UI — nie für die Kämpfer selbst.
