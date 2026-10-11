@@ -21,6 +21,7 @@ Präsentation: Hitstop, Kamerawackeln, Funken-Partikel, HP-Nachlauf-Balken, Best
 Struktur: Hauptmenü, Story-Modus (3 Kämpfe mit Texten), Freier Kampf mit Gegner-Wahl, Touch-Steuerung mit virtuellem Joystick, responsives Canvas, Dreh-Hinweis und Vollbild am Handy.
 Figuren: Juro (Spieler, Schwert), Scharr (ausgewogen), Veyra (flink, Stab), Dorn (Tank, Schwert) — alle datengetrieben in src/characters.js.
 Deployment: GitHub (Felixdahm/shadow) → Vercel. JEDER PUSH GEHT LIVE: nur funktionierende, getestete Stände pushen. Committen gern oft, pushen nur Releases.
+WICHTIG bei jedem Push: Die Cache-Version in sw.js hochzählen (schattenpfad-vN), sonst bekommen wiederkehrende Spieler das Update nicht (der Service Worker liefert Cache zuerst aus). Neue Asset-Dateien auch in die KERN-Liste in sw.js eintragen.
 
 Wie du (Claude) mit mir arbeitest
 Große Schritte, hoher Anspruch. Baue in sinnvollen Paketen und poliere sie fertig. Nach jedem Schritt: kurz was neu ist (2–3 Sätze) und wie ich es teste.
