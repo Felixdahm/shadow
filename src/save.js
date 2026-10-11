@@ -11,6 +11,7 @@ const STANDARD = {
   extra: 'stirnband',       // ausgerüsteter Silhouetten-Stil
   gekauft: ['schwert', 'stirnband'],
   schwierigkeit: 'normal',
+  ton: 'alles', // 'alles' | 'effekte' | 'aus'
 };
 
 export function ladeSpielstand() {

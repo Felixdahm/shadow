@@ -9,7 +9,8 @@ import { verarbeiteKampf } from './combat.js';
 import { zeichneStage, zeichneVordergrund } from './stage.js';
 import { zeichneUI, zeichneMenue, zeichneStory, zeichneGegnerWahl, zeichneTouchSteuerung, zeichneAusruestung, MENUE_KNOPF } from './ui.js';
 import { spawnTrefferFunken, updatePartikel, zeichnePartikel, leerePartikel } from './particles.js';
-import { spieleTreffer, spieleBlock, spieleKo, spieleGong, spieleSpezialTreffer } from './sound.js';
+import { spieleTreffer, spieleBlock, spieleKo, spieleGong, spieleSpezialTreffer, setzeEffekte } from './sound.js';
+import { setzeMusik, setzeMusikAn } from './music.js';
 
 const canvas = document.getElementById('spiel');
 const ctx = canvas.getContext('2d');
@@ -29,6 +30,17 @@ let spiel = null;
 // Dauerhafter Fortschritt (localStorage): Splitter, Käufe, Story-Station, Schwierigkeit
 const spielstand = ladeSpielstand();
 const SCHWIERIGKEITEN = ['leicht', 'normal', 'schwer'];
+const TON_MODI = ['alles', 'effekte', 'aus'];
+
+function wendeTonEinstellungAn() {
+  setzeEffekte(spielstand.ton !== 'aus');
+  setzeMusikAn(spielstand.ton === 'alles');
+}
+wendeTonEinstellungAn();
+
+// Weicher Übergang zwischen Bildschirmen (kurzes Abdunkeln)
+let blende = 0;
+let letzterModus = modus;
 
 // Auswahl-Zustand im Ausrüstungs-Bildschirm
 let ausruestungZeile = 0;
@@ -139,7 +151,8 @@ function spielerEingabe() {
 
 function menueEintraege() {
   const s = CONFIG.schwierigkeiten[spielstand.schwierigkeit];
-  return ['Story-Modus', 'Freier Kampf', 'Training', 'Ausrüstung', `Schwierigkeit: ${s.name}`];
+  const ton = { alles: 'Musik + Effekte', effekte: 'Nur Effekte', aus: 'Aus' }[spielstand.ton];
+  return ['Story-Modus', 'Freier Kampf', 'Training', 'Ausrüstung', `Schwierigkeit: ${s.name}`, `Ton: ${ton}`];
 }
 
 function updateMenue() {
@@ -150,10 +163,10 @@ function updateMenue() {
   const tap = verbraucheTap();
   let bestaetigt = verbraucheFrisch('Enter');
   if (tap) {
-    // Einträge stehen bei y = 260 + i·46 (je ±23 Tipp-Toleranz)
+    // Einträge stehen bei y = 240 + i·44 (je ±22 Tipp-Toleranz)
     for (let i = 0; i < anzahl; i++) {
-      const mitte = 260 + i * 46;
-      if (tap.y > mitte - 23 && tap.y <= mitte + 23) { menueIndex = i; bestaetigt = true; }
+      const mitte = 240 + i * 44;
+      if (tap.y > mitte - 22 && tap.y <= mitte + 22) { menueIndex = i; bestaetigt = true; }
     }
   }
   if (bestaetigt) {
@@ -168,10 +181,16 @@ function updateMenue() {
       neuesTraining();
     } else if (menueIndex === 3) {
       modus = 'ausruestung';
-    } else {
+    } else if (menueIndex === 4) {
       // Schwierigkeitsgrad durchschalten und merken
       const i = SCHWIERIGKEITEN.indexOf(spielstand.schwierigkeit);
       spielstand.schwierigkeit = SCHWIERIGKEITEN[(i + 1) % SCHWIERIGKEITEN.length];
+      speichereSpielstand(spielstand);
+    } else {
+      // Ton-Einstellung durchschalten
+      const i = TON_MODI.indexOf(spielstand.ton);
+      spielstand.ton = TON_MODI[(i + 1) % TON_MODI.length];
+      wendeTonEinstellungAn();
       speichereSpielstand(spielstand);
     }
   }
@@ -401,6 +420,17 @@ function update(dt) {
   else if (modus === 'story') updateStory();
   else if (modus === 'ausruestung') updateAusruestung();
   else updateKampf(dt);
+
+  // Musik folgt dem Ort: Arena im Kampf, sonst Menü-Stück
+  setzeMusik(modus === 'kampf' && spiel ? spiel.arena : 'menue');
+
+  // Bildschirmwechsel kurz abdunkeln (weicher Übergang)
+  if (modus !== letzterModus) {
+    blende = 1;
+    letzterModus = modus;
+  }
+  blende = Math.max(0, blende - dt * 4);
+
   tickEnde();
 }
 
@@ -467,6 +497,11 @@ function renderMenue() {
 function render() {
   if (modus === 'kampf') renderKampf();
   else renderMenue();
+
+  if (blende > 0) {
+    ctx.fillStyle = `rgba(8, 6, 16, ${(blende * 0.9).toFixed(2)})`;
+    ctx.fillRect(0, 0, CONFIG.canvas.breite, CONFIG.canvas.hoehe);
+  }
 }
 
 // Fester Zeitschritt: Die Simulation läuft immer mit 120 Schritten pro Sekunde,

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- App-Icon: Silhouetten-Kämpfer vor Abendhimmel, passend zum Spiel-Look -->
+  <defs>
+    <linearGradient id="himmel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2b1a4e"/>
+      <stop offset="0.55" stop-color="#8e3b6b"/>
+      <stop offset="1" stop-color="#e8734a"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#himmel)"/>
+  <circle cx="356" cy="170" r="60" fill="#ffdca0" opacity="0.9"/>
+  <!-- Boden -->
+  <path d="M0 420 L512 400 L512 512 L0 512 Z" fill="#17101f"/>
+  <!-- Kämpfer-Silhouette (Schlag-Pose) -->
+  <g stroke="#0a0a0f" stroke-linecap="round" fill="none">
+    <circle cx="208" cy="166" r="34" fill="#0a0a0f" stroke="none"/>
+    <path d="M208 196 L218 300" stroke-width="40"/>
+    <path d="M214 224 L330 218" stroke-width="26"/>
+    <path d="M330 218 L392 212" stroke-width="24"/>
+    <path d="M210 232 L160 286" stroke-width="26"/>
+    <path d="M218 300 L170 398 L150 430" stroke-width="28"/>
+    <path d="M218 300 L286 360 L300 428" stroke-width="28"/>
+  </g>
+</svg>

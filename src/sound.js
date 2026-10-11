@@ -1,17 +1,32 @@
 // Alle Geräusche werden mit WebAudio direkt im Code erzeugt — keine Audiodateien nötig.
 // Browser erlauben Ton erst nach der ersten Nutzereingabe, deshalb wird der
-// AudioContext beim ersten Tastendruck angelegt.
+// AudioContext bei der ersten Eingabe angelegt — Taste ODER Touch (Handy!).
 
 let audio = null;
+let effekteAn = true;
 
-window.addEventListener('keydown', () => {
+function weckeAudio() {
   if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
   if (audio.state === 'suspended') audio.resume();
-});
+}
+
+window.addEventListener('keydown', weckeAudio);
+window.addEventListener('touchstart', weckeAudio);
+window.addEventListener('pointerdown', weckeAudio);
+
+// music.js teilt sich denselben AudioContext
+export function holeAudio() {
+  return audio;
+}
+
+// Einstellung "Ton": Effekte lassen sich getrennt von der Musik abschalten
+export function setzeEffekte(an) {
+  effekteAn = an;
+}
 
 // Ein Ton, der von einer Frequenz zu einer anderen gleitet und ausklingt
 function ton(freqStart, freqEnde, dauer, typ = 'sine', lautstaerke = 0.3) {
-  if (!audio) return;
+  if (!audio || !effekteAn) return;
   const t = audio.currentTime;
   const osc = audio.createOscillator();
   const gain = audio.createGain();
@@ -27,7 +42,7 @@ function ton(freqStart, freqEnde, dauer, typ = 'sine', lautstaerke = 0.3) {
 
 // Kurzes gefiltertes Rauschen (für "Luft"- und Aufprall-Geräusche)
 function rauschen(dauer, filterFrequenz, lautstaerke = 0.25) {
-  if (!audio) return;
+  if (!audio || !effekteAn) return;
   const t = audio.currentTime;
   const puffer = audio.createBuffer(1, Math.ceil(audio.sampleRate * dauer), audio.sampleRate);
   const daten = puffer.getChannelData(0);

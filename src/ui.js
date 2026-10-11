@@ -242,8 +242,8 @@ export function zeichneMenue(ctx, eintraege, auswahl, zeit, splitter) {
   eintraege.forEach((eintrag, i) => {
     const gewaehlt = i === auswahl;
     ctx.fillStyle = gewaehlt ? '#ffd27d' : 'rgba(243, 233, 247, 0.75)';
-    ctx.font = gewaehlt ? 'bold 30px system-ui, sans-serif' : '27px system-ui, sans-serif';
-    ctx.fillText(gewaehlt ? `▸ ${eintrag} ◂` : eintrag, mitte, 260 + i * 46);
+    ctx.font = gewaehlt ? 'bold 28px system-ui, sans-serif' : '25px system-ui, sans-serif';
+    ctx.fillText(gewaehlt ? `▸ ${eintrag} ◂` : eintrag, mitte, 240 + i * 44);
   });
 
   ctx.fillStyle = 'rgba(243, 233, 247, 0.55)';

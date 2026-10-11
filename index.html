@@ -3,6 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="description" content="Schattenpfad — 2D-Silhouetten-Kampfspiel. Kämpfe dich über den Pfad bis zu deinem eigenen Schatten.">
+  <meta name="theme-color" content="#0e0a14">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta property="og:title" content="Schattenpfad">
+  <meta property="og:description" content="2D-Silhouetten-Kampfspiel im Browser — am besten am Handy im Querformat.">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="manifest" href="manifest.webmanifest">
   <title>Schattenpfad</title>
   <style>
     html, body {
@@ -71,5 +81,13 @@
     <div class="text">Dreh dein Handy ins Querformat, um zu kämpfen</div>
   </div>
   <script type="module" src="src/main.js"></script>
+  <script>
+    // PWA: Service Worker macht das Spiel installierbar und offline spielbar
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(() => {
+        /* z. B. file:// oder alte Browser — Spiel läuft trotzdem */
+      });
+    }
+  </script>
 </body>
 </html>
