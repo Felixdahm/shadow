@@ -384,6 +384,7 @@ export class Kaempfer {
       extras: this.charakter.extras,
       farben: this.charakter.farben ?? null,
       kopfBild: KOEPFE[this.name.toLowerCase()] ?? null,
+      details: this.name.toLowerCase(),
     });
 
     if (dreht) ctx.restore();

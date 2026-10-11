@@ -33,7 +33,7 @@ const WAFFEN_FARBEN = {
 // optionen: { einfaerbung, skalierung, waffe, extras, farben }
 // farben = { haut, oben, unten, akzent, haar? }
 export function zeichneSkelett(ctx, x, fussY, blick, pose, optionen = {}) {
-  const { einfaerbung = null, skalierung = 1, waffe = null, extras = [], farben = null, kopfBild = null } = optionen;
+  const { einfaerbung = null, skalierung = 1, waffe = null, extras = [], farben = null, kopfBild = null, details = null } = optionen;
   const s = CONFIG.skelett;
   const sk = skalierung;
   const hx = x;
@@ -128,6 +128,74 @@ export function zeichneSkelett(ctx, x, fussY, blick, pose, optionen = {}) {
     glied(ex, ey, fx, fy, s.linienBreite * 1.1, farbe);
     knochen(fx, fy, fx + blick * 9 * sk, fy, s.linienBreite * 0.9, schuhFarbe); // Schuh
   };
+
+  // ---- Charakter-Details (handgebaut, animiert) ----
+  // Phase "hinten" = hinter dem Körper (Umhang), Phase "vorn" = darüber (Gurte, Stoff).
+  const zeit = performance.now() / 1000;
+
+  const stoffband = (ax, ay, winkel, laenge, breite, farbe) => {
+    // ein flatterndes Stoffende: Winkel 0 = hängt senkrecht, flattert mit der Zeit
+    const [bx2, by2] = [ax + Math.sin(winkel) * laenge * blick, ay + Math.cos(winkel) * laenge];
+    knochen(ax, ay, bx2, by2, breite, farbe);
+  };
+
+  const zeichneDetails = (phase) => {
+    if (einfaerbung || !details) return;
+
+    if (details === 'dorn' && phase === 'hinten') {
+      // Schwerer Umhang, der hinter dem Körper schwingt
+      const schwung = Math.sin(zeit * 1.6) * 6 * sk + pose.rumpf * -20 * sk;
+      const farbe = toene(F.oben, 0.55);
+      ctx.fillStyle = farbe;
+      ctx.beginPath();
+      ctx.moveTo(sx - blick * 4 * sk, sy - 6 * sk);
+      ctx.lineTo(sx - blick * 20 * sk, sy + 10 * sk);
+      ctx.lineTo(hx - blick * (34 * sk + schwung), hy + 52 * sk);
+      ctx.lineTo(hx - blick * (8 * sk + schwung * 0.4), hy + 56 * sk);
+      ctx.lineTo(hx + blick * 2 * sk, hy + 10 * sk);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    if (phase !== 'vorn') return;
+
+    if (details === 'juro') {
+      // Rote Gürtel-Enden, die beim Bewegen flattern + Gi-Kragen
+      const knoten = [hx + blick * hueftBreite * 0.7, hy + 2 * sk];
+      const flatter = Math.sin(zeit * 5) * 0.18 + pose.vHuefte * 0.25;
+      stoffband(knoten[0], knoten[1], -0.25 - flatter, 20 * sk, 4, F.akzent);
+      stoffband(knoten[0], knoten[1], -0.55 - flatter, 26 * sk, 4, toene(F.akzent, 0.75));
+      knochen(sx + blick * 3 * sk, sy - 3 * sk, sx - blick * 5 * sk, sy + 14 * sk, 4, toene(F.oben, 1.45)); // Kragen
+    } else if (details === 'scharr') {
+      // Brustgurt quer über den Rumpf + helle Schulterplatte
+      knochen(sx + blick * 6 * sk, sy + 2 * sk, hx - blick * 6 * sk, hy - 4 * sk, 5, toene(F.oben, 1.3));
+      kreis(sx + blick * 3 * sk, sy - 2 * sk, schulterBreite * 0.7, toene(F.oben, 1.35));
+    } else if (details === 'veyra') {
+      // Silberne Schärpe + wehendes Schärpen-Ende an der Hüfte
+      knochen(sx + blick * 5 * sk, sy + 3 * sk, hx - blick * 5 * sk, hy - 3 * sk, 5.5, F.akzent);
+      const flatter = -0.7 + Math.sin(zeit * 4.2) * 0.2 + pose.hHuefte * 0.3;
+      stoffband(hx - blick * hueftBreite * 0.6, hy, flatter, 30 * sk, 5, toene(F.akzent, 0.85));
+    } else if (details === 'lith') {
+      // Zerfetzter Schal, der nach hinten weht + Messer-Riemen am Oberschenkel
+      const flatter = -0.9 + Math.sin(zeit * 6) * 0.25;
+      stoffband(sx - blick * 4 * sk, sy - 2 * sk, flatter, 24 * sk, 5, F.akzent);
+      stoffband(sx - blick * 6 * sk, sy + 2 * sk, flatter - 0.3, 17 * sk, 4, toene(F.akzent, 0.7));
+      const [ox, oy] = ende(hx, hy, pose.vHuefte, s.oberschenkel * 0.55);
+      knochen(ox - 6 * sk, oy, ox + 6 * sk, oy, 4, toene(F.unten, 0.4));
+    } else if (details === 'umbra') {
+      // Rauchschwaden, die vom Schattenkörper aufsteigen
+      for (let i = 0; i < 3; i++) {
+        const lauf = (zeit * 26 + i * 40) % 110;
+        const wx2 = hx + Math.sin(zeit * 2 + i * 2.1) * 10 * sk - blick * 6 * sk;
+        const wy2 = hy + 10 * sk - lauf * sk;
+        ctx.globalAlpha = Math.max(0, 0.3 - lauf / 400);
+        kreis(wx2, wy2, (5 + i * 2) * sk, '#8A5CF6');
+      }
+      ctx.globalAlpha = 1;
+    }
+  };
+
+  zeichneDetails('hinten');
 
   // ---- Hintere Gliedmaßen (dunkler → Tiefe) ----
   bein(pose.hHuefte, pose.hKnie, untenHinten, schuhHinten);
@@ -239,4 +307,6 @@ export function zeichneSkelett(ctx, x, fussY, blick, pose, optionen = {}) {
   // ---- Vordere Gliedmaßen (volle Farben, Waffe in der vorderen Hand) ----
   bein(pose.vHuefte, pose.vKnie, F.unten, schuhVorn);
   arm(pose.vSchulter, pose.vEllbogen, F.oben, einfaerbung ?? basis.haut, true);
+
+  zeichneDetails('vorn');
 }

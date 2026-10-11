@@ -466,6 +466,7 @@ export function zeichneAusruestung(ctx, daten) {
     extras: [stilEintrag.id],
     farben: { haut: '#e8b48a', oben: '#2c3a5e', unten: '#1f2a45', akzent: '#c43b3b', haar: '#222b3f' },
     kopfBild: KOEPFE.juro,
+    details: 'juro',
   });
 
   const reihe = (y, label, eintrag, aktiv) => {
@@ -596,6 +597,7 @@ export function zeichneGegnerWahl(ctx, charakter, zeit, portraitId) {
     extras: charakter.extras,
     farben: charakter.farben,
     kopfBild: KOEPFE[portraitId] ?? null,
+    details: portraitId,
   });
 
   ctx.fillStyle = '#F5B452';
