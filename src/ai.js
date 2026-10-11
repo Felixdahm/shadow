@@ -23,7 +23,8 @@ export function kiEingabe(ich, gegner, dt) {
 
   const K = CONFIG.ki;
   const stil = KI_STILE[ich.charakter.kiStil] ?? KI_STILE.ausgewogen;
-  g.timer = K.denkIntervallMin + Math.random() * (K.denkIntervallMax - K.denkIntervallMin);
+  // denkFaktor kommt vom Schwierigkeitsgrad: leicht = träger, schwer = reaktionsschneller
+  g.timer = (K.denkIntervallMin + Math.random() * (K.denkIntervallMax - K.denkIntervallMin)) * (ich.charakter.denkFaktor ?? 1);
 
   const e = leereEingabe();
   g.eingabe = e;

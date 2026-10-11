@@ -1,12 +1,13 @@
 import { CONFIG } from './config.js';
 import { istGedrueckt, verbraucheFrisch, tickEnde, aktiviereTouch, istTouchAktiv, verbraucheTap } from './input.js';
 import { Kaempfer } from './fighter.js';
-import { CHARAKTERE, GEGNER_PFAD, STORY } from './characters.js';
+import { CHARAKTERE, GEGNER_PFAD, STORY, WAFFEN_LADEN, STIL_LADEN } from './characters.js';
+import { ladeSpielstand, speichereSpielstand } from './save.js';
 import { kiEingabe, leereEingabe } from './ai.js';
 import { wendePhysikAn, trenneKaempfer } from './physics.js';
 import { verarbeiteKampf } from './combat.js';
 import { zeichneStage, zeichneVordergrund } from './stage.js';
-import { zeichneUI, zeichneMenue, zeichneStory, zeichneGegnerWahl, zeichneTouchSteuerung, MENUE_KNOPF } from './ui.js';
+import { zeichneUI, zeichneMenue, zeichneStory, zeichneGegnerWahl, zeichneTouchSteuerung, zeichneAusruestung, MENUE_KNOPF } from './ui.js';
 import { spawnTrefferFunken, updatePartikel, zeichnePartikel, leerePartikel } from './particles.js';
 import { spieleTreffer, spieleBlock, spieleKo, spieleGong, spieleSpezialTreffer } from './sound.js';
 
@@ -17,7 +18,7 @@ const START_X_SPIELER = 320;
 const START_X_GEGNER = 640;
 
 // Oberster Spielzustand: Menü → (Story-Text) → Kampf → zurück
-let modus = 'menue'; // 'menue' | 'gegnerWahl' | 'story' | 'kampf'
+let modus = 'menue'; // 'menue' | 'gegnerWahl' | 'story' | 'kampf' | 'ausruestung'
 let menueIndex = 0;  // gewählter Menüeintrag
 let wahlIndex = 0;   // gewählter Gegner im freien Kampf
 let menueZeit = 0;   // für Atem-Animationen im Menü
@@ -25,13 +26,39 @@ let gegnerIndex = 0; // Position auf dem Schattenpfad
 let storyModus = true;
 let spiel = null;
 
+// Dauerhafter Fortschritt (localStorage): Splitter, Käufe, Story-Station, Schwierigkeit
+const spielstand = ladeSpielstand();
+const SCHWIERIGKEITEN = ['leicht', 'normal', 'schwer'];
+
+// Auswahl-Zustand im Ausrüstungs-Bildschirm
+let ausruestungZeile = 0;
+let waffenIndex = Math.max(0, WAFFEN_LADEN.findIndex((w) => w.id === spielstand.waffe));
+let stilIndex = Math.max(0, STIL_LADEN.findIndex((s) => s.id === spielstand.extra));
+
+// Juro mit der aktuell ausgerüsteten Waffe und dem gewählten Stil
+function spielerCharakter() {
+  return { ...CHARAKTERE.juro, waffe: spielstand.waffe, extras: [spielstand.extra] };
+}
+
+// Gegner mit angewendetem Schwierigkeitsgrad
+function gegnerCharakter(id) {
+  const basis = CHARAKTERE[id];
+  const s = CONFIG.schwierigkeiten[spielstand.schwierigkeit];
+  return {
+    ...basis,
+    schadenFaktor: basis.schadenFaktor * s.schaden,
+    hpFaktor: basis.hpFaktor * s.hp,
+    denkFaktor: s.denken,
+  };
+}
+
 const kamera = { x: 0, shake: 0 };
 
 function neuerKampf() {
-  const gegnerDaten = CHARAKTERE[GEGNER_PFAD[gegnerIndex]];
+  const gegnerDaten = gegnerCharakter(GEGNER_PFAD[gegnerIndex]);
   const naechsterName = GEGNER_PFAD[gegnerIndex + 1] ? CHARAKTERE[GEGNER_PFAD[gegnerIndex + 1]].name : null;
   spiel = {
-    spieler: new Kaempfer(CHARAKTERE.juro, START_X_SPIELER, 1),
+    spieler: new Kaempfer(spielerCharakter(), START_X_SPIELER, 1),
     gegner: new Kaempfer(gegnerDaten, START_X_GEGNER, -1),
     runde: 1,
     phase: 'intro', // intro → kampf → rundenEnde → (intro | matchEnde) → (weiter | pfadEnde)
@@ -58,7 +85,7 @@ function neuerKampf() {
 function neuesTraining() {
   storyModus = false;
   spiel = {
-    spieler: new Kaempfer(CHARAKTERE.juro, START_X_SPIELER, 1),
+    spieler: new Kaempfer(spielerCharakter(), START_X_SPIELER, 1),
     gegner: new Kaempfer(CHARAKTERE.scharr, START_X_GEGNER, -1),
     runde: 1,
     phase: 'kampf', // kein Intro — direkt loslegen
@@ -110,30 +137,83 @@ function spielerEingabe() {
 
 // ---------- Menü- und Story-Logik ----------
 
+function menueEintraege() {
+  const s = CONFIG.schwierigkeiten[spielstand.schwierigkeit];
+  return ['Story-Modus', 'Freier Kampf', 'Training', 'Ausrüstung', `Schwierigkeit: ${s.name}`];
+}
+
 function updateMenue() {
-  const anzahl = 3;
+  const anzahl = menueEintraege().length;
   if (verbraucheFrisch('ArrowUp')) menueIndex = (menueIndex + anzahl - 1) % anzahl;
   if (verbraucheFrisch('ArrowDown')) menueIndex = (menueIndex + 1) % anzahl;
   // Touch: Tipp auf einen Menüeintrag wählt und bestätigt ihn
   const tap = verbraucheTap();
   let bestaetigt = verbraucheFrisch('Enter');
   if (tap) {
-    // Einträge stehen bei y = 300, 358, 416 (je ±28 Tipp-Toleranz)
+    // Einträge stehen bei y = 260 + i·46 (je ±23 Tipp-Toleranz)
     for (let i = 0; i < anzahl; i++) {
-      const mitte = 300 + i * 58;
-      if (tap.y > mitte - 29 && tap.y <= mitte + 29) { menueIndex = i; bestaetigt = true; }
+      const mitte = 260 + i * 46;
+      if (tap.y > mitte - 23 && tap.y <= mitte + 23) { menueIndex = i; bestaetigt = true; }
     }
   }
   if (bestaetigt) {
     if (menueIndex === 0) {
       storyModus = true;
-      gegnerIndex = 0;
+      // Story setzt an der höchsten erreichten Station fort
+      gegnerIndex = Math.min(spielstand.fortschritt, GEGNER_PFAD.length - 1);
       modus = 'story';
     } else if (menueIndex === 1) {
       modus = 'gegnerWahl';
-    } else {
+    } else if (menueIndex === 2) {
       neuesTraining();
+    } else if (menueIndex === 3) {
+      modus = 'ausruestung';
+    } else {
+      // Schwierigkeitsgrad durchschalten und merken
+      const i = SCHWIERIGKEITEN.indexOf(spielstand.schwierigkeit);
+      spielstand.schwierigkeit = SCHWIERIGKEITEN[(i + 1) % SCHWIERIGKEITEN.length];
+      speichereSpielstand(spielstand);
     }
+  }
+}
+
+function updateAusruestung() {
+  const tap = verbraucheTap();
+  let bestaetigt = verbraucheFrisch('Enter');
+  let links = verbraucheFrisch('ArrowLeft');
+  let rechts = verbraucheFrisch('ArrowRight');
+
+  if (verbraucheFrisch('ArrowUp') || verbraucheFrisch('ArrowDown')) ausruestungZeile = 1 - ausruestungZeile;
+  if (verbraucheFrisch('Escape')) { zumMenue(); return; }
+
+  if (tap) {
+    // Tipp auf eine Zeile wählt sie; links/rechts davon blättert, Mitte bestätigt
+    if (tap.y > 140 && tap.y < 280) ausruestungZeile = 0;
+    else if (tap.y >= 280 && tap.y < 430) ausruestungZeile = 1;
+    else { zumMenue(); return; } // Tipp ganz unten/oben = zurück
+    if (tap.x < 220) links = true;
+    else if (tap.x > 440 && tap.x < 580) bestaetigt = true;
+  }
+
+  const liste = ausruestungZeile === 0 ? WAFFEN_LADEN : STIL_LADEN;
+  let index = ausruestungZeile === 0 ? waffenIndex : stilIndex;
+  if (links) index = (index + liste.length - 1) % liste.length;
+  if (rechts) index = (index + 1) % liste.length;
+  if (ausruestungZeile === 0) waffenIndex = index; else stilIndex = index;
+
+  if (bestaetigt) {
+    const eintrag = liste[index];
+    const besitzt = spielstand.gekauft.includes(eintrag.id);
+    if (!besitzt && spielstand.splitter >= eintrag.preis) {
+      spielstand.splitter -= eintrag.preis;
+      spielstand.gekauft.push(eintrag.id);
+    }
+    if (spielstand.gekauft.includes(eintrag.id)) {
+      // Gekauftes wird direkt ausgerüstet
+      if (ausruestungZeile === 0) spielstand.waffe = eintrag.id;
+      else spielstand.extra = eintrag.id;
+    }
+    speichereSpielstand(spielstand);
   }
 }
 
@@ -281,6 +361,20 @@ function updateKampf(dt) {
         spiel.phase = 'matchEnde';
         spiel.phasenZeit = 0;
         spieleGong();
+
+        // Belohnung gutschreiben und Fortschritt dauerhaft speichern
+        const B = CONFIG.belohnungen;
+        const istBoss = CHARAKTERE[GEGNER_PFAD[gegnerIndex]].boss;
+        spiel.belohnung = spiel.spielerHatGewonnen
+          ? (spiel.storyModus ? (istBoss ? B.bossSieg : B.storySieg) : B.freierSieg)
+          : B.niederlage;
+        spielstand.splitter += spiel.belohnung;
+        if (spiel.storyModus && spiel.spielerHatGewonnen) {
+          spielstand.fortschritt = Math.max(spielstand.fortschritt, gegnerIndex + 1);
+          // Pfad geschafft → nächster Story-Durchlauf beginnt wieder vorn
+          if (spielstand.fortschritt >= GEGNER_PFAD.length) spielstand.fortschritt = 0;
+        }
+        speichereSpielstand(spielstand);
       } else {
         naechsteRunde();
       }
@@ -305,6 +399,7 @@ function update(dt) {
   if (modus === 'menue') updateMenue();
   else if (modus === 'gegnerWahl') updateGegnerWahl();
   else if (modus === 'story') updateStory();
+  else if (modus === 'ausruestung') updateAusruestung();
   else updateKampf(dt);
   tickEnde();
 }
@@ -349,7 +444,15 @@ function renderMenue() {
   zeichneVordergrund(ctx, drift, arena);
 
   if (modus === 'menue') {
-    zeichneMenue(ctx, menueIndex, menueZeit);
+    zeichneMenue(ctx, menueEintraege(), menueIndex, menueZeit, spielstand.splitter);
+  } else if (modus === 'ausruestung') {
+    zeichneAusruestung(ctx, {
+      zeile: ausruestungZeile,
+      waffenEintrag: WAFFEN_LADEN[waffenIndex],
+      stilEintrag: STIL_LADEN[stilIndex],
+      spielstand,
+      zeit: menueZeit,
+    });
   } else if (modus === 'story') {
     const karte = {
       stationen: GEGNER_PFAD.map((id) => CHARAKTERE[id].name),

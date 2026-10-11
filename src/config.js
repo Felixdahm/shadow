@@ -76,7 +76,22 @@ export const CONFIG = {
   waffen: {
     schwert: { laenge: 55, reichweiteBonus: 45, schadenBonus: 4 },
     stab:    { laenge: 95, reichweiteBonus: 55, schadenBonus: 2 },
-    dolch:   { laenge: 30, reichweiteBonus: 15, schadenBonus: 2 },
+    dolch:   { laenge: 30, reichweiteBonus: 15, schadenBonus: 2, tempoBonus: 0.12 },
+  },
+
+  // Schwierigkeitsgrade wirken nur auf die KI-Gegner
+  schwierigkeiten: {
+    leicht: { name: 'Leicht', schaden: 0.7,  hp: 0.85, denken: 1.3 },
+    normal: { name: 'Normal', schaden: 1,    hp: 1,    denken: 1 },
+    schwer: { name: 'Schwer', schaden: 1.25, hp: 1.15, denken: 0.75 },
+  },
+
+  // Schatten-Splitter ◆ als Belohnung nach einem Match
+  belohnungen: {
+    storySieg: 25,
+    bossSieg: 60,
+    freierSieg: 15,
+    niederlage: 5,
   },
 
   // Endboss-Mechanik "Schattenschritt": kurz unsichtbar, dann hinter dem Gegner

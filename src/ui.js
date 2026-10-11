@@ -123,6 +123,13 @@ export function zeichneUI(ctx, spiel) {
     } else {
       untertitel(ctx, 'R für Revanche · Esc für das Menü');
     }
+    // Verdiente Schatten-Splitter anzeigen
+    if (spiel.belohnung > 0) {
+      ctx.fillStyle = '#ffd27d';
+      ctx.font = 'bold 24px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`+${spiel.belohnung} ◆`, breite / 2, 300);
+    }
   } else if (spiel.phase === 'pfadEnde') {
     ansage(ctx, 'PFAD BEZWUNGEN', 60, spiel.phasenZeit);
     untertitel(ctx, 'Enter für das Menü');
@@ -207,14 +214,23 @@ function textBlock(ctx, text, y, maxBreite, zeilenHoehe) {
   return y;
 }
 
-export function zeichneMenue(ctx, auswahl, zeit) {
+// Splitter-Kontostand oben rechts (Menü-Bildschirme)
+function zeichneSplitter(ctx, splitter) {
+  ctx.fillStyle = '#ffd27d';
+  ctx.font = 'bold 20px system-ui, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText(`◆ ${splitter}`, CONFIG.canvas.breite - 36, 42);
+}
+
+export function zeichneMenue(ctx, eintraege, auswahl, zeit, splitter) {
   const mitte = CONFIG.canvas.breite / 2;
   schleier(ctx, 0.45);
+  zeichneSplitter(ctx, splitter);
 
   // Titel "atmet" ganz leicht
   const skala = 1 + 0.015 * Math.sin(zeit * 1.5);
   ctx.save();
-  ctx.translate(mitte, 170);
+  ctx.translate(mitte, 150);
   ctx.scale(skala, skala);
   ctx.fillStyle = 'rgba(255, 235, 200, 0.97)';
   ctx.font = 'bold 76px system-ui, sans-serif';
@@ -222,18 +238,79 @@ export function zeichneMenue(ctx, auswahl, zeit) {
   ctx.fillText('SCHATTENPFAD', 0, 0);
   ctx.restore();
 
-  const eintraege = ['Story-Modus', 'Freier Kampf', 'Training'];
   ctx.textAlign = 'center';
   eintraege.forEach((eintrag, i) => {
     const gewaehlt = i === auswahl;
     ctx.fillStyle = gewaehlt ? '#ffd27d' : 'rgba(243, 233, 247, 0.75)';
-    ctx.font = gewaehlt ? 'bold 34px system-ui, sans-serif' : '30px system-ui, sans-serif';
-    ctx.fillText(gewaehlt ? `▸ ${eintrag} ◂` : eintrag, mitte, 300 + i * 58);
+    ctx.font = gewaehlt ? 'bold 30px system-ui, sans-serif' : '27px system-ui, sans-serif';
+    ctx.fillText(gewaehlt ? `▸ ${eintrag} ◂` : eintrag, mitte, 260 + i * 46);
   });
 
   ctx.fillStyle = 'rgba(243, 233, 247, 0.55)';
   ctx.font = '17px system-ui, sans-serif';
-  ctx.fillText('↑ ↓ wählen · Enter bestätigen', mitte, 480);
+  ctx.fillText('↑ ↓ wählen · Enter bestätigen', mitte, 505);
+  ctx.textAlign = 'left';
+}
+
+// Ausrüstungs-Bildschirm: Waffe und Stil wählen/kaufen, Juro als Live-Vorschau
+export function zeichneAusruestung(ctx, daten) {
+  const { zeile, waffenEintrag, stilEintrag, spielstand, zeit } = daten;
+  const mitte = CONFIG.canvas.breite / 2;
+  schleier(ctx, 0.55);
+  zeichneSplitter(ctx, spielstand.splitter);
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(255, 235, 200, 0.95)';
+  ctx.font = 'bold 34px system-ui, sans-serif';
+  ctx.fillText('AUSRÜSTUNG', mitte, 90);
+
+  // Juro-Vorschau rechts — zeigt sofort die gerade angewählte Kombination,
+  // auch wenn sie noch nicht gekauft ist
+  const pose = poseZumZeitpunkt('stehen', zeit);
+  zeichneSkelett(ctx, 740, CONFIG.physik.bodenY, -1, pose, {
+    waffe: waffenEintrag.id,
+    extras: [stilEintrag.id],
+  });
+
+  const reihe = (y, label, eintrag, aktiv) => {
+    const besitzt = spielstand.gekauft.includes(eintrag.id);
+    const ausgeruestet = spielstand.waffe === eintrag.id || spielstand.extra === eintrag.id;
+
+    ctx.fillStyle = 'rgba(243, 233, 247, 0.5)';
+    ctx.font = 'bold 15px system-ui, sans-serif';
+    ctx.fillText(label, 330, y - 38);
+
+    ctx.fillStyle = aktiv ? '#ffd27d' : 'rgba(243, 233, 247, 0.85)';
+    ctx.font = aktiv ? 'bold 32px system-ui, sans-serif' : '28px system-ui, sans-serif';
+    ctx.fillText(`◂  ${eintrag.name}  ▸`, 330, y);
+
+    ctx.font = '16px system-ui, sans-serif';
+    if (ausgeruestet) {
+      ctx.fillStyle = '#7ddc6a';
+      ctx.fillText('✓ Ausgerüstet', 330, y + 30);
+    } else if (besitzt) {
+      ctx.fillStyle = 'rgba(243, 233, 247, 0.7)';
+      ctx.fillText('Enter: ausrüsten', 330, y + 30);
+    } else if (spielstand.splitter >= eintrag.preis) {
+      ctx.fillStyle = '#ffd27d';
+      ctx.fillText(`Enter: kaufen für ${eintrag.preis} ◆`, 330, y + 30);
+    } else {
+      ctx.fillStyle = '#e06046';
+      ctx.fillText(`${eintrag.preis} ◆ — zu wenig Splitter`, 330, y + 30);
+    }
+    if (eintrag.info) {
+      ctx.fillStyle = 'rgba(243, 233, 247, 0.55)';
+      ctx.font = '14px system-ui, sans-serif';
+      ctx.fillText(eintrag.info, 330, y + 54);
+    }
+  };
+
+  reihe(200, 'WAFFE', waffenEintrag, zeile === 0);
+  reihe(350, 'STIL', stilEintrag, zeile === 1);
+
+  ctx.fillStyle = 'rgba(243, 233, 247, 0.55)';
+  ctx.font = '16px system-ui, sans-serif';
+  ctx.fillText('↑↓ Zeile · ←→ wählen · Enter kaufen/ausrüsten · Esc zurück', mitte, 505);
   ctx.textAlign = 'left';
 }
 

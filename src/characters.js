@@ -91,6 +91,21 @@ export const STORY = {
   ende: 'Umbra zerfällt zu Nebel — und Juro steht zum ersten Mal ohne Schatten in der Sonne. Der Pfad ist zu Ende. Für heute.',
 };
 
+// Der Ausrüstungs-Laden: Waffen verändern Juros Kampfwerte,
+// Stile nur seine Silhouette. Preise in Schatten-Splittern ◆.
+export const WAFFEN_LADEN = [
+  { id: 'schwert', name: 'Schwert', preis: 0,   info: 'Ausgewogen — gute Reichweite, guter Schaden' },
+  { id: 'dolch',   name: 'Dolch',   preis: 100, info: 'Kurze Klinge, aber du läufst 12 % schneller' },
+  { id: 'stab',    name: 'Stab',    preis: 140, info: 'Riesige Reichweite, wenig Bonus-Schaden' },
+];
+
+export const STIL_LADEN = [
+  { id: 'stirnband', name: 'Stirnband', preis: 0 },
+  { id: 'zopf',      name: 'Zopf',      preis: 60 },
+  { id: 'irokese',   name: 'Irokese',   preis: 60 },
+  { id: 'kapuze',    name: 'Kapuze',    preis: 80 },
+];
+
 // KI-Persönlichkeiten: Wahrscheinlichkeiten für Angriff, Block und Rückzug
 export const KI_STILE = {
   ausgewogen: { angriffsLust: 0.5, blockNeigung: 0.45, rueckzug: 0.15 },

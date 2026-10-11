@@ -10,8 +10,9 @@ export class Kaempfer {
     this.name = charakter.name;
     this.skalierung = charakter.skalierung;
     this.maxHp = Math.round(CONFIG.kaempfer.maxHp * charakter.hpFaktor);
-    this.tempo = CONFIG.kaempfer.laufTempo * charakter.tempoFaktor;
     this.waffenDaten = charakter.waffe ? CONFIG.waffen[charakter.waffe] : null;
+    // Manche Waffen (Dolch) machen den Träger schneller
+    this.tempo = CONFIG.kaempfer.laufTempo * charakter.tempoFaktor * (1 + (this.waffenDaten?.tempoBonus ?? 0));
 
     this.x = x;
     this.y = CONFIG.physik.bodenY; // y = Fußposition
