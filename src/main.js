@@ -6,7 +6,7 @@ import { ladeSpielstand, speichereSpielstand } from './save.js';
 import { kiEingabe, leereEingabe } from './ai.js';
 import { wendePhysikAn, trenneKaempfer } from './physics.js';
 import { verarbeiteKampf } from './combat.js';
-import { zeichneStage, zeichneVordergrund, zeichneAmbiente } from './stage.js';
+import { zeichneStage, zeichneVordergrund, zeichneAmbiente, ARENA_RIM } from './stage.js';
 import {
   zeichneUI, zeichneStory, zeichneAusruestung, zeichneTouchSteuerung,
   zeichnePanel, zeichneWeltKarte, zeichneVignette,
@@ -86,9 +86,14 @@ function turnierBelohnung(index) {
 }
 
 function kampfGeruest(gegnerDaten, gegnerId) {
+  const spieler = new Kaempfer(spielerCharakter(), START_X_SPIELER, 1);
+  const gegner = new Kaempfer(gegnerDaten, START_X_GEGNER, -1);
+  // Edel-Silhouetten: beide Kämpfer bekommen die Lichtfarbe ihrer Arena
+  spieler.rim = ARENA_RIM[gegnerDaten.arena ?? 'aschenpass'];
+  gegner.rim = spieler.rim;
   return {
-    spieler: new Kaempfer(spielerCharakter(), START_X_SPIELER, 1),
-    gegner: new Kaempfer(gegnerDaten, START_X_GEGNER, -1),
+    spieler,
+    gegner,
     runde: 1,
     phase: 'intro',
     phasenZeit: 0,

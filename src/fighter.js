@@ -438,6 +438,7 @@ export class Kaempfer {
       kopfBild: KOEPFE[this.name.toLowerCase()] ?? null,
       details: this.name.toLowerCase(),
       textur: TEXTUREN[this.name.toLowerCase()] ?? null,
+      silhouette: this.rim ?? null, // Arena-Lichtfarbe → Shadow-Fight-Silhouette
     });
 
     if (dreht) ctx.restore();

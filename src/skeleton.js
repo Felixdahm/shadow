@@ -34,7 +34,8 @@ const WAFFEN_FARBEN = {
 // optionen: { einfaerbung, skalierung, waffe, extras, farben }
 // farben = { haut, oben, unten, akzent, haar? }
 export function zeichneSkelett(ctx, x, fussY, blick, pose, optionen = {}) {
-  const { einfaerbung = null, skalierung = 1, waffe = null, extras = [], farben = null, kopfBild = null, details = null, textur = null } = optionen;
+  const { einfaerbung = null, skalierung = 1, waffe = null, extras = [], farben = null, kopfBild = null, details = null, textur = null, silhouette = null } = optionen;
+  const sil = silhouette && !einfaerbung; // Shadow-Fight-Silhouetten-Modus
   const s = CONFIG.skelett;
   const sk = skalierung;
   const hx = x;
@@ -59,7 +60,7 @@ export function zeichneSkelett(ctx, x, fussY, blick, pose, optionen = {}) {
   // Gliedmaße im gemalten Look: dunkle Kontur, gemalte Stoff-Textur (falls
   // geladen) mit Farb-Tönung darüber, dann eine Licht-Kante — wie ein
   // Pinselstrich mit Licht von oben.
-  const muster = einfaerbung ? null : holeMuster(ctx, textur);
+  const muster = einfaerbung || sil ? null : holeMuster(ctx, textur);
   const rgba = (farbe, alpha) => {
     const [r, g, b] = (farbe.startsWith('#')
       ? [parseInt(farbe.slice(1, 3), 16), parseInt(farbe.slice(3, 5), 16), parseInt(farbe.slice(5, 7), 16)]
@@ -78,8 +79,10 @@ export function zeichneSkelett(ctx, x, fussY, blick, pose, optionen = {}) {
       knochen(ax, ay, bx, by, breite, farbe);
     }
     if (!einfaerbung) {
+      // Licht-Kante: im Silhouetten-Modus leuchtet sie in der Arena-Lichtfarbe
       const licht = breite * 0.26 * sk;
-      knochen(ax, ay - licht, bx, by - licht, breite * 0.38, toene(farbe, 1.35));
+      const lichtFarbe = sil ? rgba(silhouette, 0.4) : toene(farbe, 1.35);
+      knochen(ax, ay - licht, bx, by - licht, breite * (sil ? 0.26 : 0.38), lichtFarbe);
     }
   };
 
@@ -94,17 +97,21 @@ export function zeichneSkelett(ctx, x, fussY, blick, pose, optionen = {}) {
   const [sx, sy] = ende(hx, hy, pose.rumpf, s.rumpfLaenge, true);
   const [kx, ky] = ende(sx, sy, pose.rumpf + pose.kopf, s.halsLaenge + s.kopfRadius, true);
 
-  // Farb-Satz: Hit-Flash färbt alles ein, sonst die Charakter-Palette
-  const basis = farben ?? { haut: '#0a0a0f', oben: '#0a0a0f', unten: '#0a0a0f', akzent: '#1f1f28', haar: null };
+  // Farb-Satz: Hit-Flash färbt alles ein; im Silhouetten-Modus (Shadow-Fight-Look)
+  // wird die ganze Figur tiefdunkel, hintere Gliedmaßen LEICHT heller fürs
+  // Tiefen-Lesen, und die Licht-Kante leuchtet in der Arena-Lichtfarbe.
+  const basis = sil
+    ? { haut: '#0d0a14', oben: '#0d0a14', unten: '#0b0812', akzent: '#171020', haar: '#05030a' }
+    : (farben ?? { haut: '#0a0a0f', oben: '#0a0a0f', unten: '#0a0a0f', akzent: '#1f1f28', haar: null });
   const F = einfaerbung
     ? { haut: einfaerbung, oben: einfaerbung, unten: einfaerbung, akzent: einfaerbung, haar: null, waffe: einfaerbung }
-    : { haar: null, ...basis, waffe: WAFFEN_FARBEN[waffe] ?? '#aeb6c4' };
-  const hinten = (farbe, faktor) => einfaerbung ?? dunkler(farbe, faktor);
+    : { haar: null, ...basis, waffe: sil ? '#241c33' : (WAFFEN_FARBEN[waffe] ?? '#aeb6c4') };
+  const hinten = (farbe, faktor) => einfaerbung ?? (sil ? '#241a36' : dunkler(farbe, faktor));
   const obenHinten = hinten(basis.oben, 0.62);
   const untenHinten = hinten(basis.unten, 0.62);
   const hautHinten = hinten(basis.haut, 0.62);
-  const schuhVorn = hinten(basis.unten, 0.45);
-  const schuhHinten = hinten(basis.unten, 0.3);
+  const schuhVorn = einfaerbung ?? (sil ? '#0b0812' : dunkler(basis.unten, 0.45));
+  const schuhHinten = einfaerbung ?? (sil ? '#241a36' : dunkler(basis.unten, 0.3));
 
   const zeichneWaffe = (wx, wy, winkel) => {
     const W = CONFIG.waffen[waffe];
@@ -250,9 +257,16 @@ export function zeichneSkelett(ctx, x, fussY, blick, pose, optionen = {}) {
       sx + qx * schulterBreite, sy + qy * schulterBreite,
       hx - qx * hueftBreite, hy - qy * hueftBreite,
     );
-    verlauf.addColorStop(0, rgba(toene(F.oben, 1.3), muster ? 0.45 : 1));
-    verlauf.addColorStop(0.45, rgba(F.oben, muster ? 0.4 : 1));
-    verlauf.addColorStop(1, rgba(toene(F.oben, 0.6), muster ? 0.55 : 1));
+    if (sil) {
+      // Silhouette: Schulterpartie fängt etwas Arena-Licht, Rest bleibt tiefdunkel
+      verlauf.addColorStop(0, rgba(silhouette, 0.28));
+      verlauf.addColorStop(0.3, F.oben);
+      verlauf.addColorStop(1, F.oben);
+    } else {
+      verlauf.addColorStop(0, rgba(toene(F.oben, 1.3), muster ? 0.45 : 1));
+      verlauf.addColorStop(0.45, rgba(F.oben, muster ? 0.4 : 1));
+      verlauf.addColorStop(1, rgba(toene(F.oben, 0.6), muster ? 0.55 : 1));
+    }
     ctx.fillStyle = verlauf;
     rumpfPfad();
     ctx.fill();
@@ -281,8 +295,9 @@ export function zeichneSkelett(ctx, x, fussY, blick, pose, optionen = {}) {
   // Gürtel an der Hüfte
   knochen(hx - qx * hueftBreite * 1.15, hy - qy * hueftBreite * 1.15, hx + qx * hueftBreite * 1.15, hy + qy * hueftBreite * 1.15, 4.5, F.akzent);
 
-  // ---- Kopf: gemaltes fal-Kopfbild am Skelett (dreht sich mit) — oder Fallback ----
-  if (kopfBild?.bereit && !einfaerbung) {
+  // ---- Kopf: gemaltes fal-Kopfbild am Skelett (dreht sich mit) — oder Fallback.
+  // Im Silhouetten-Modus immer der Silhouetten-Kopf (mit Glühaugen).
+  if (kopfBild?.bereit && !einfaerbung && !sil) {
     const g = s.kopfRadius * sk * 4.6; // die Bilder enthalten Haare/Kapuzen → größer als der Kopfkreis
     ctx.save();
     ctx.translate(kx, ky);
@@ -298,11 +313,18 @@ export function zeichneSkelett(ctx, x, fussY, blick, pose, optionen = {}) {
       ctx.arc(kx, ky - 1 * sk, s.kopfRadius * sk * 1.05, Math.PI * 0.95, Math.PI * 2.05);
       ctx.fill();
     }
+    if (sil) {
+      // Glühauge in der Arena-Lichtfarbe — das Markenzeichen der Silhouette
+      const ax2 = kx + blick * s.kopfRadius * sk * 0.45;
+      const ay2 = ky - 2 * sk;
+      kreis(ax2, ay2, 4.5 * sk, rgba(silhouette, 0.25));
+      kreis(ax2, ay2, 2.4 * sk, rgba(silhouette, 0.95));
+    }
   }
 
   // ---- Extras (in der Akzentfarbe; Kopf-Details nur ohne gemalten Kopf) ----
-  const vorn = F.akzent;
-  const kopfGemalt = kopfBild?.bereit && !einfaerbung;
+  const vorn = sil ? '#171020' : F.akzent;
+  const kopfGemalt = kopfBild?.bereit && !einfaerbung && !sil;
   if (!kopfGemalt && extras.includes('stirnband')) {
     const bx = kx - blick * s.kopfRadius * sk;
     knochen(bx, ky, bx - blick * 16 * sk, ky + 4 * sk, 3, vorn);

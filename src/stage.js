@@ -42,6 +42,15 @@ function ladeFreigestellt(pfad, abdunkeln = 1) {
   return ebene;
 }
 
+// Lichtfarbe jeder Arena — färbt die Leucht-Kante (Rim-Light) der Silhouetten
+export const ARENA_RIM = {
+  aschenpass: '#F5A65B',
+  mondhain: '#A8D8E8',
+  glutschmiede: '#FF9A4D',
+  nebelschlucht: '#9FD0C0',
+  leere: '#8A5CF6',
+};
+
 const ARENEN = {
   aschenpass: {
     himmel: ladeBild('assets/backgrounds/aschenpass-himmel.png'),
