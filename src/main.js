@@ -64,7 +64,7 @@ function gegnerCharakter(id) {
   };
 }
 
-const kamera = { x: 0, shake: 0 };
+const kamera = { x: 0, shake: 0, zoom: 1 };
 
 function neuerKampf() {
   const gegnerDaten = gegnerCharakter(GEGNER_PFAD[gegnerIndex]);
@@ -307,6 +307,7 @@ function updateKampf(dt) {
   zielX = Math.max(-G.kameraMaxX, Math.min(G.kameraMaxX, zielX));
   kamera.x += (zielX - kamera.x) * Math.min(1, 3 * dt);
   kamera.shake *= Math.exp(-7 * dt);
+  kamera.zoom += (1 - kamera.zoom) * Math.min(1, 6 * dt); // Zoom-Punch klingt ab
 
   // Hitstop: die Welt friert für einen Wimpernschlag ein, das macht Treffer wuchtig
   if (spiel.hitstop > 0) {
@@ -345,10 +346,13 @@ function updateKampf(dt) {
       spawnTrefferFunken(e.x, e.y, e.richtung, e.blockt, e.ko || wuchtig);
       spiel.hitstop = e.ko ? G.hitstopKo : wuchtig ? 0.12 : e.blockt ? G.hitstopBlock : G.hitstopTreffer;
       kamera.shake = Math.max(kamera.shake, e.ko ? G.shakeKo : wuchtig ? 12 : e.blockt ? G.shakeBlock : G.shakeTreffer);
+      // Mikro-Zoom auf wuchtige Treffer — die Kamera "beißt zu"
+      if (e.ko) kamera.zoom = 1.1;
+      else if (wuchtig && !e.blockt) kamera.zoom = 1.06;
       if (e.ko) spieleKo();
       else if (wuchtig && !e.blockt) spieleSpezialTreffer();
       else if (e.blockt) spieleBlock();
-      else spieleTreffer();
+      else spieleTreffer(e.serie - 1);
     }
 
     // Training: niemand geht K.O., beide regenerieren langsam
@@ -446,6 +450,13 @@ function renderKampf() {
 
   ctx.save();
   ctx.translate(jitterX, jitterY);
+
+  // Zoom-Punch: kurzes Heranzoomen um die Bildmitte bei wuchtigen Treffern
+  if (kamera.zoom > 1.001) {
+    ctx.translate(CONFIG.canvas.breite / 2, CONFIG.canvas.hoehe / 2);
+    ctx.scale(kamera.zoom, kamera.zoom);
+    ctx.translate(-CONFIG.canvas.breite / 2, -CONFIG.canvas.hoehe / 2);
+  }
 
   zeichneStage(ctx, kamera.x, spiel.arena); // Hintergrund-Ebenen mit Parallax
 

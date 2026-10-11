@@ -64,9 +64,12 @@ export function spieleSchwung() {
   rauschen(0.09, 900, 0.12);
 }
 
-export function spieleTreffer() {
-  ton(160, 55, 0.14, 'sine', 0.5);   // dumpfer Aufprall
-  rauschen(0.06, 400, 0.2);
+// stufe = Position in der Treffer-Serie: jeder Folgetreffer klingt etwas höher,
+// das macht Kombos hörbar ("dup, dap, DÄNG")
+export function spieleTreffer(stufe = 0) {
+  const s = Math.min(4, stufe);
+  ton(160 + s * 28, 55 + s * 10, 0.14, 'sine', 0.5);
+  rauschen(0.06, 400 + s * 120, 0.2);
 }
 
 export function spieleBlock() {

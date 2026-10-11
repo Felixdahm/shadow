@@ -32,6 +32,7 @@ export class Kaempfer {
     this.rolleRichtung = 1;    // Bildschirm-Richtung der aktuellen Rolle
     this.saltoRichtung = 1;    // Bildschirm-Richtung des aktuellen Saltos
     this.teleportiert = false; // Schattenschritt: wurde schon gesprungen?
+    this.trefferZeit = 0;      // wann (Zustands-Zeit) der laufende Angriff getroffen hat
     this.letzterTrefferZug = null; // für die Spam-Strafe: welcher Angriff traf zuletzt?
     this.spamZaehler = 0;
     this.trefferSerie = { anzahl: 0, timer: 0 }; // Kombo-Zähler fürs UI
@@ -144,19 +145,27 @@ export class Kaempfer {
       } else if (this.zustand === 'wurf') {
         this.vx = 0;
       } else {
-        // Leichter Ausfallschritt nach vorn macht Angriffe druckvoller
-        this.vx = this.zustandZeit < A.aktivBis ? this.blick * 90 : 0;
+        const K = CONFIG.kombo;
+        // Ausfallschritt nach vorn; in der Kette größer, damit man am Gegner dranbleibt
+        const schritt = this.kombo > 0 ? K.kettenAusfall : 90;
+        this.vx = this.zustandZeit < A.aktivBis ? this.blick * schritt : 0;
 
-        // Kombo: Nach dem Treffer-Fenster darf direkt der nächste Angriff starten
+        // Treffer-Cancel: Hat der Angriff GETROFFEN, darf sofort nach dem Einschlag
+        // der nächste folgen — die Kette fließt. Verfehlte Angriffe müssen erst
+        // ausschwingen, Whiffen ist also riskant.
         const wunsch = this.aktionsPuffer?.aktion;
-        const kettenFenster = A.aktivBis + CONFIG.kombo.fensterNach;
-        if (wunsch && wunsch !== 'spezial' && this.kombo < CONFIG.kombo.maxKette - 1 && this.zustandZeit >= kettenFenster) {
+        const kettenFenster = this.hatGetroffen
+          ? Math.max(this.trefferZeit + K.treffCancel, A.aktivVon)
+          : A.aktivBis + K.whiffCancel;
+        if (wunsch && wunsch !== 'spezial' && this.kombo < K.maxKette - 1 && this.zustandZeit >= kettenFenster) {
           this.kombo++;
           this.aktionsPuffer = null;
           // Schlag auf Schlag wechselt die Faust: gerader Stoß → Haken → gerader Stoß
           let naechster = wunsch;
           if (naechster === 'schlag' && this.zustand === 'schlag') naechster = 'schlag2';
           this.wechsle(naechster);
+          // Folgeangriffe starten schon halb ausgeholt — das macht die Kette schnell
+          this.zustandZeit = K.kettenVorlauf;
           return;
         }
       }

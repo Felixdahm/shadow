@@ -43,6 +43,7 @@ function pruefeTreffer(angreifer, ziel, ereignisse) {
   if (!trifftX || !trifftY) return;
 
   angreifer.hatGetroffen = true;
+  angreifer.trefferZeit = angreifer.zustandZeit; // ab hier darf der Angreifer canceln
 
   const K2 = CONFIG.kombo;
   const istSpezial = angreifer.zustand === 'spezial';
@@ -66,9 +67,11 @@ function pruefeTreffer(angreifer, ziel, ereignisse) {
 
   const schaden = blockt ? Math.max(1, Math.round(basisSchaden * CONFIG.treffer.blockSchadenFaktor)) : basisSchaden;
   ziel.hp = Math.max(0, ziel.hp - schaden);
+  // Ketten-Treffer halten den Gegner nah (wenig Rückstoß), erst der Finisher schleudert
+  const kettenHit = !istSpezial && !istWurf && !finisher;
   ziel.rueckstoss = angreifer.blick * A.rueckstoss
     * (blockt ? CONFIG.treffer.blockRueckstossFaktor : 1)
-    * (finisher ? K2.finisherRueckstoss : 1);
+    * (finisher ? K2.finisherRueckstoss : kettenHit ? K2.kettenRueckstossFaktor : 1);
 
   // Treffer-Serie fürs UI: Angreifer zählt hoch, wer getroffen wird, verliert seine Serie
   if (!blockt) {
@@ -88,6 +91,8 @@ function pruefeTreffer(angreifer, ziel, ereignisse) {
     ziel.wechsle('ko');
   } else if (!blockt) {
     ziel.wechsle('treffer');
+    // Der Finisher streckt länger nieder — Zeit, um Abstand zu gewinnen oder nachzusetzen
+    if (finisher) ziel.zustandZeit = -0.2;
   }
 
   ereignisse.push({
@@ -100,5 +105,6 @@ function pruefeTreffer(angreifer, ziel, ereignisse) {
     spezial: istSpezial,
     wurf: istWurf,
     finisher,
+    serie: angreifer.trefferSerie.anzahl,
   });
 }

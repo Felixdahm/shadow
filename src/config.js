@@ -57,7 +57,7 @@ export const CONFIG = {
   },
 
   treffer: {
-    hitstunDauer: 0.3,        // so lange ist der Getroffene handlungsunfähig
+    hitstunDauer: 0.34,       // so lange ist der Getroffene handlungsunfähig
     blockSchadenFaktor: 0.15, // geblockt kommt nur ein Bruchteil des Schadens durch
     blockRueckstossFaktor: 0.4,
   },
@@ -104,7 +104,11 @@ export const CONFIG = {
 
   kombo: {
     maxKette: 3,        // höchstens 3 Angriffe hintereinander
-    fensterNach: 0.05,  // so lange nach dem Treffer-Fenster darf verkettet werden
+    treffCancel: 0.06,  // nach einem TREFFER darf so schnell der nächste Angriff folgen
+    whiffCancel: 0.1,   // VERFEHLT? Dann erst nach dem Ausschwingen (aktivBis + diese Zeit)
+    kettenVorlauf: 0.05,       // Folgeangriffe starten schon halb ausgeholt (schneller)
+    kettenAusfall: 130,        // größerer Ausfallschritt in der Kette — bleibt am Gegner dran
+    kettenRueckstossFaktor: 0.55, // Ketten-Treffer stoßen wenig weg, nur der Finisher schleudert
     pufferDauer: 0.25,  // Angriffs-Eingaben bleiben so lange gültig (wichtig auf Touch)
     finisherSchaden: 1.4,   // der 3. Treffer der Kette haut deutlich härter rein
     finisherRueckstoss: 1.7,
