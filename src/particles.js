@@ -23,6 +23,24 @@ export function spawnTrefferFunken(x, y, richtung, blockt, ko = false) {
   }
 }
 
+// Violette Rauchwolke beim Schattenschritt des Endbosses
+const SCHATTEN_FARBEN = ['#5b3a8a', '#2b1546', '#8a6cc9'];
+
+export function spawnSchattenWolke(x, y) {
+  for (let i = 0; i < 18; i++) {
+    partikel.push({
+      x: x + (Math.random() - 0.5) * 50,
+      y: y + (Math.random() - 0.5) * 100,
+      vx: (Math.random() - 0.5) * 140,
+      vy: -20 - Math.random() * 70,
+      leben: 0.4 + Math.random() * 0.35,
+      alter: 0,
+      groesse: 4 + Math.random() * 6,
+      farbe: SCHATTEN_FARBEN[i % SCHATTEN_FARBEN.length],
+    });
+  }
+}
+
 export function updatePartikel(dt) {
   for (let i = partikel.length - 1; i >= 0; i--) {
     const p = partikel[i];

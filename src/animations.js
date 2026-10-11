@@ -153,6 +153,10 @@ export const ANIMATIONEN = {
     { t: 0.42, pose: SPEZIAL_DURCHZUG, art: 'weich' },
     { t: 0.6, pose: STAND, art: 'weich' },
   ] },
+  // Schattenschritt des Endbosses: kurz sammeln, verschwinden, wieder auftauchen
+  schatten: { dauer: 0.4, loop: false, frames: [
+    { t: 0, pose: STAND }, { t: 0.15, pose: SPEZIAL_SAMMELN, art: 'weich' }, { t: 0.4, pose: STAND, art: 'weich' },
+  ] },
   treffer: { dauer: 0.3, loop: false, frames: [
     { t: 0, pose: STAND },
     { t: 0.05, pose: TREFFER_POSE, art: 'zack' },

@@ -2,7 +2,7 @@ import { CONFIG } from './config.js';
 import { KI_STILE } from './characters.js';
 
 export function leereEingabe() {
-  return { links: false, rechts: false, springen: false, ducken: false, schlag: false, tritt: false, block: false, spezial: false };
+  return { links: false, rechts: false, springen: false, ducken: false, schlag: false, tritt: false, block: false, spezial: false, teleport: false };
 }
 
 // Gegner-KI: entscheidet alle 0,2–0,45 s neu. Der KI-Stil des Charakters
@@ -16,6 +16,7 @@ export function kiEingabe(ich, gegner, dt) {
   g.eingabe.tritt = false;
   g.eingabe.springen = false;
   g.eingabe.spezial = false;
+  g.eingabe.teleport = false;
 
   g.timer -= dt;
   if (g.timer > 0) return g.eingabe;
@@ -43,6 +44,20 @@ export function kiEingabe(ich, gegner, dt) {
       // Rolle nach hinten, aus der Reichweite raus
       e.ducken = true;
       e[gegnerIstRechts ? 'links' : 'rechts'] = true;
+      return e;
+    }
+  }
+
+  // Endboss: Schattenschritt — bei Abstand hinter den Gegner teleportieren.
+  // In der Wut-Phase (unter 50 % HP) deutlich öfter und aggressiver.
+  if (ich.charakter.boss) {
+    const wut = ich.hp < ich.maxHp / 2;
+    if (abstand > 170 && wuerfel < (wut ? 0.6 : 0.35)) {
+      e.teleport = true;
+      return e;
+    }
+    if (wut && ich.energie >= CONFIG.spezial.energieMax && wuerfel < 0.75) {
+      e.spezial = true;
       return e;
     }
   }

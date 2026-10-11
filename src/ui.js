@@ -237,22 +237,62 @@ export function zeichneMenue(ctx, auswahl, zeit) {
   ctx.textAlign = 'left';
 }
 
-export function zeichneStory(ctx, text) {
+// Kampagnen-Karte: die Stationen des Pfads als verbundene Punkte.
+// Geschaffte Stationen sind golden, die aktuelle pulsiert, kommende sind dunkel.
+function zeichneKarte(ctx, karte, y) {
+  const n = karte.stationen.length;
+  const abstand = 110;
+  const startX = CONFIG.canvas.breite / 2 - ((n - 1) * abstand) / 2;
+
+  ctx.strokeStyle = 'rgba(243, 233, 247, 0.3)';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(startX, y);
+  ctx.lineTo(startX + (n - 1) * abstand, y);
+  ctx.stroke();
+
+  for (let i = 0; i < n; i++) {
+    const px = startX + i * abstand;
+    const geschafft = i < karte.aktuell;
+    const aktuell = i === karte.aktuell;
+
+    ctx.beginPath();
+    ctx.arc(px, y, aktuell ? 10 : 8, 0, Math.PI * 2);
+    ctx.fillStyle = geschafft ? '#ffd27d' : aktuell ? '#f3e9f7' : 'rgba(10, 8, 18, 0.7)';
+    ctx.fill();
+    if (aktuell) {
+      const puls = 12 + 3 * Math.sin(performance.now() / 180);
+      ctx.strokeStyle = 'rgba(255, 210, 125, 0.8)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(px, y, puls, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = aktuell ? '#ffd27d' : 'rgba(243, 233, 247, 0.6)';
+    ctx.font = aktuell ? 'bold 13px system-ui, sans-serif' : '13px system-ui, sans-serif';
+    ctx.fillText(karte.stationen[i], px, y + 30);
+  }
+}
+
+export function zeichneStory(ctx, text, karte) {
   const mitte = CONFIG.canvas.breite / 2;
   schleier(ctx, 0.68);
 
   ctx.textAlign = 'center';
   ctx.fillStyle = 'rgba(255, 235, 200, 0.95)';
   ctx.font = 'bold 30px system-ui, sans-serif';
-  ctx.fillText('DER SCHATTENPFAD', mitte, 150);
+  ctx.fillText('DER SCHATTENPFAD', mitte, 110);
+
+  if (karte) zeichneKarte(ctx, karte, 165);
 
   ctx.fillStyle = 'rgba(243, 233, 247, 0.92)';
   ctx.font = '22px system-ui, sans-serif';
-  textBlock(ctx, text, 230, 640, 36);
+  textBlock(ctx, text, 250, 660, 35);
 
   ctx.fillStyle = 'rgba(243, 233, 247, 0.55)';
   ctx.font = '17px system-ui, sans-serif';
-  ctx.fillText('Enter — weiter', mitte, 470);
+  ctx.fillText('Enter / Tippen — weiter', mitte, 480);
   ctx.textAlign = 'left';
 }
 

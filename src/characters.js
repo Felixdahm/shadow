@@ -38,6 +38,18 @@ export const CHARAKTERE = {
     arena: 'mondhain',
     beschreibung: 'Stabkämpferin des Mondhains · schnell, aber zerbrechlich',
   },
+  lith: {
+    name: 'Lith',
+    skalierung: 0.88,
+    tempoFaktor: 1.45,
+    schadenFaktor: 0.75,
+    hpFaktor: 0.8,
+    waffe: 'dolch',
+    extras: ['irokese'],
+    kiStil: 'wild',
+    arena: 'glutschmiede',
+    beschreibung: 'Messertänzer der Glutschmiede · rastlos, wild, kaum zu fassen',
+  },
   dorn: {
     name: 'Dorn',
     skalierung: 1.12,
@@ -50,17 +62,33 @@ export const CHARAKTERE = {
     arena: 'nebelschlucht',
     beschreibung: 'Herr der Nebelschlucht · langsam, blockt viel, trifft brutal',
   },
+  umbra: {
+    name: 'Umbra',
+    skalierung: 1.02,
+    tempoFaktor: 1.05,
+    schadenFaktor: 1.1,
+    hpFaktor: 1.5,
+    waffe: 'schwert',
+    extras: ['stirnband'], // Juros Spiegelbild — gleiche Silhouette, anderes Wesen
+    kiStil: 'boss',
+    arena: 'leere',
+    boss: true, // eigene Mechanik: Schattenschritt (Teleport) + Wut-Phase unter 50 % HP
+    farbe: { vorn: '#190b2b', hinten: '#2b1546' },
+    beschreibung: 'Juros eigener Schatten · Endboss · erscheint, wo du nicht hinsiehst',
+  },
 };
 
 // Die Gegner-Reihenfolge auf dem Schattenpfad
-export const GEGNER_PFAD = ['scharr', 'veyra', 'dorn'];
+export const GEGNER_PFAD = ['scharr', 'veyra', 'lith', 'dorn', 'umbra'];
 
 // Story-Texte vor jedem Kampf (Story-Modus)
 export const STORY = {
   scharr: 'Juro verlässt sein Dorf mit nichts als dem Schwert seines Vaters. Am Aschenpass versperrt ihm Scharr den Weg — ein Wächter, der niemanden ohne Kampf passieren lässt.',
   veyra: 'Hinter dem Pass beginnt der Mondhain. Zwischen den Bäumen wartet Veyra, die flinke Stabkämpferin. Sie kämpft nicht aus Zorn — sie will sehen, ob Juro würdig ist.',
-  dorn: 'Am Ende des Pfads liegt die Nebelschlucht. Dort herrscht Dorn, der gepanzerte Schatten. Wer ihn bezwingt, hat den Schattenpfad gemeistert.',
-  ende: 'Der Nebel lichtet sich. Juro hat den Schattenpfad bezwungen — doch jenseits der Schlucht warten schon neue Schatten.',
+  lith: 'Unter dem Mondhain glüht die alte Glutschmiede. Dort tanzt Lith zwischen den Funken — zwei Schritte, ein Schnitt. Noch nie hat er jemanden vorbeigelassen, nur weil der müde war.',
+  dorn: 'Tiefer im Gebirge liegt die Nebelschlucht. Dort herrscht Dorn, der gepanzerte Schatten. Hinter ihm, sagt man, endet der Pfad. Doch das stimmt nicht ganz.',
+  umbra: 'Am Ende des Pfads wartet kein Fremder. Der Schatten, der Juro seit dem ersten Schritt folgt, löst sich vom Boden und zieht das Schwert: Umbra. Wer den Pfad beenden will, muss den eigenen Schatten bezwingen.',
+  ende: 'Umbra zerfällt zu Nebel — und Juro steht zum ersten Mal ohne Schatten in der Sonne. Der Pfad ist zu Ende. Für heute.',
 };
 
 // KI-Persönlichkeiten: Wahrscheinlichkeiten für Angriff, Block und Rückzug
@@ -68,4 +96,6 @@ export const KI_STILE = {
   ausgewogen: { angriffsLust: 0.5, blockNeigung: 0.45, rueckzug: 0.15 },
   aggressiv:  { angriffsLust: 0.72, blockNeigung: 0.2, rueckzug: 0.05 },
   defensiv:   { angriffsLust: 0.35, blockNeigung: 0.65, rueckzug: 0.25 },
+  wild:       { angriffsLust: 0.8, blockNeigung: 0.1, rueckzug: 0.08 },
+  boss:       { angriffsLust: 0.6, blockNeigung: 0.35, rueckzug: 0.1 },
 };

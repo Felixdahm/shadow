@@ -64,6 +64,22 @@ const ARENEN = {
     boden: '#0e1517',
     vordergrund: '#060b0c',
   },
+  // Für die beiden neuen Arenen gibt es noch keine generierten Bilder —
+  // bis dahin zeichnet der Fallback (Farbverlauf + Silhouetten) die Stimmung.
+  glutschmiede: {
+    himmel: ladeBild('assets/backgrounds/glutschmiede-himmel.png'),
+    huegel: ladeFreigestellt('assets/backgrounds/glutschmiede-huegel.png', 0.5),
+    fallbackHimmel: ['#1c0a08', '#4a1410', '#8a2c14', '#d4551e'],
+    boden: '#140808',
+    vordergrund: '#090404',
+  },
+  leere: {
+    himmel: ladeBild('assets/backgrounds/leere-himmel.png'),
+    huegel: ladeFreigestellt('assets/backgrounds/leere-huegel.png', 0.5),
+    fallbackHimmel: ['#050308', '#120a24', '#1f1240', '#190f33'],
+    boden: '#07040d',
+    vordergrund: '#030207',
+  },
 };
 
 // Fallback-Silhouetten, solange die Bilder noch laden.

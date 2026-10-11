@@ -76,6 +76,13 @@ export const CONFIG = {
   waffen: {
     schwert: { laenge: 55, reichweiteBonus: 45, schadenBonus: 4 },
     stab:    { laenge: 95, reichweiteBonus: 55, schadenBonus: 2 },
+    dolch:   { laenge: 30, reichweiteBonus: 15, schadenBonus: 2 },
+  },
+
+  // Endboss-Mechanik "Schattenschritt": kurz unsichtbar, dann hinter dem Gegner
+  boss: {
+    teleportDauer: 0.4,
+    teleportAbstand: 110,
   },
 
   kombo: {

@@ -74,6 +74,11 @@ export function spieleSpezialTreffer() {
   rauschen(0.2, 300, 0.3);
 }
 
+export function spieleTeleport() {
+  ton(700, 120, 0.25, 'sine', 0.18); // abtauchendes "Wusch"
+  rauschen(0.18, 2000, 0.08);
+}
+
 export function spieleGong() {
   ton(440, 430, 0.9, 'triangle', 0.25);
   ton(662, 650, 0.7, 'triangle', 0.12); // leicht verstimmte Oberton-Schwebung

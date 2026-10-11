@@ -1,7 +1,8 @@
 import { CONFIG } from './config.js';
 import { poseZumZeitpunkt, mischePosen, weich, sprungPose } from './animations.js';
 import { zeichneSkelett } from './skeleton.js';
-import { spieleSchwung, spieleSpezialStart } from './sound.js';
+import { spieleSchwung, spieleSpezialStart, spieleTeleport } from './sound.js';
+import { spawnSchattenWolke } from './particles.js';
 
 export class Kaempfer {
   constructor(charakter, x, blick) {
@@ -29,6 +30,7 @@ export class Kaempfer {
     this.aktionsPuffer = null; // gepufferter Angriffs-Wunsch { aktion, alter }
     this.rolleRichtung = 1;    // Bildschirm-Richtung der aktuellen Rolle
     this.saltoRichtung = 1;    // Bildschirm-Richtung des aktuellen Saltos
+    this.teleportiert = false; // Schattenschritt: wurde schon gesprungen?
     this.kiGedaechtnis = { timer: 0, eingabe: null };
     // Für weiche Übergänge: die zuletzt gezeichnete Pose wird beim
     // Zustandswechsel als Startpunkt der Überblendung gemerkt.
@@ -60,6 +62,9 @@ export class Kaempfer {
       spieleSchwung();
     } else if (zustand === 'spezial') {
       spieleSpezialStart();
+    } else if (zustand === 'schatten') {
+      this.teleportiert = false;
+      spieleTeleport();
     } else {
       this.kombo = 0;
     }
@@ -171,6 +176,24 @@ export class Kaempfer {
       return;
     }
 
+    if (this.zustand === 'schatten') {
+      // Schattenschritt des Endbosses: ausblenden, hinter dem Gegner auftauchen.
+      // Während des Schritts ist er unverwundbar (siehe combat.js).
+      this.vx = 0;
+      const B = CONFIG.boss;
+      if (!this.teleportiert && this.zustandZeit >= B.teleportDauer / 2) {
+        this.teleportiert = true;
+        const P = CONFIG.physik;
+        spawnSchattenWolke(this.x, this.y - 90 * this.skalierung);
+        // "Hinter" dem Gegner = die Seite, von der er wegschaut
+        this.x = Math.max(P.randLinks, Math.min(P.randRechts, gegner.x - gegner.blick * B.teleportAbstand));
+        this.blick = gegner.x >= this.x ? 1 : -1;
+        spawnSchattenWolke(this.x, this.y - 90 * this.skalierung);
+      }
+      if (this.zustandZeit >= B.teleportDauer) this.wechsle('stehen');
+      return;
+    }
+
     if (this.zustand === 'rolle') {
       // Die Rolle trägt den Kämpfer tief über den Boden — Schläge gehen drüber weg
       this.vx = this.rolleRichtung * CONFIG.bewegung.rollTempo;
@@ -186,7 +209,9 @@ export class Kaempfer {
 
     const wunsch = this.aktionsPuffer?.aktion;
 
-    if (wunsch === 'spezial' && this.energie >= CONFIG.spezial.energieMax) {
+    if (eingabe.teleport && this.charakter.boss) {
+      this.wechsle('schatten');
+    } else if (wunsch === 'spezial' && this.energie >= CONFIG.spezial.energieMax) {
       this.aktionsPuffer = null;
       this.energie = 0;
       this.wechsle('spezial');
@@ -232,6 +257,29 @@ export class Kaempfer {
     ctx.ellipse(this.x, CONFIG.physik.bodenY + 8, 42 * this.skalierung, 9, 0, 0, Math.PI * 2);
     ctx.fill();
 
+    // Boss-Aura: violettes Glimmen, in der Wut-Phase (unter 50 % HP) deutlich stärker
+    if (this.charakter.boss && this.lebt()) {
+      const wut = this.hp < this.maxHp / 2;
+      const puls = 0.6 + 0.4 * Math.sin(performance.now() / (wut ? 90 : 220));
+      const mitteY = this.y - 85 * this.skalierung;
+      const radius = 100 * this.skalierung;
+      const aura = ctx.createRadialGradient(this.x, mitteY, 10, this.x, mitteY, radius);
+      aura.addColorStop(0, `rgba(138, 108, 201, ${((wut ? 0.35 : 0.16) * puls).toFixed(2)})`);
+      aura.addColorStop(1, 'rgba(138, 108, 201, 0)');
+      ctx.fillStyle = aura;
+      ctx.beginPath();
+      ctx.arc(this.x, mitteY, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Während des Schattenschritts blendet die Figur aus und wieder ein
+    if (this.zustand === 'schatten') {
+      const halb = CONFIG.boss.teleportDauer / 2;
+      ctx.globalAlpha = this.zustandZeit < halb
+        ? Math.max(0, 1 - this.zustandZeit / halb)
+        : Math.min(1, (this.zustandZeit - halb) / halb);
+    }
+
     // Im Sprung folgt die Pose der Flugbahn, sonst der Keyframe-Animation
     let pose = this.zustand === 'springen'
       ? sprungPose(this.vy)
@@ -266,9 +314,11 @@ export class Kaempfer {
       skalierung: this.skalierung,
       waffe: this.charakter.waffe,
       extras: this.charakter.extras,
+      farbe: this.charakter.farbe ?? null,
     });
 
     if (dreht) ctx.restore();
+    ctx.globalAlpha = 1;
 
     this.zeichneSchwungSpur(ctx);
   }

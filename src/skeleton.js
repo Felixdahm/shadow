@@ -9,7 +9,7 @@ import { CONFIG } from './config.js';
 // skalierung streckt das ganze Skelett — so entstehen große und kleine Figuren
 // aus denselben Posen.
 export function zeichneSkelett(ctx, x, fussY, blick, pose, optionen = {}) {
-  const { einfaerbung = null, skalierung = 1, waffe = null, extras = [] } = optionen;
+  const { einfaerbung = null, skalierung = 1, waffe = null, extras = [], farbe = null } = optionen;
   const s = CONFIG.skelett;
   const sk = skalierung;
   const hx = x;
@@ -35,21 +35,24 @@ export function zeichneSkelett(ctx, x, fussY, blick, pose, optionen = {}) {
   const [sx, sy] = ende(hx, hy, pose.rumpf, s.rumpfLaenge, true);
   const [kx, ky] = ende(sx, sy, pose.rumpf + pose.kopf, s.halsLaenge + s.kopfRadius, true);
 
-  const zeichneWaffe = (wx, wy, winkel, farbe) => {
+  const zeichneWaffe = (wx, wy, winkel, farbeWaffe) => {
     const W = CONFIG.waffen[waffe];
     // Richtung, in die der Unterarm zeigt — die Waffe verlängert ihn
     const dx = Math.sin(winkel) * blick;
     const dy = Math.cos(winkel);
     if (waffe === 'schwert') {
-      knochen(wx, wy, wx + dx * W.laenge * sk, wy + dy * W.laenge * sk, 7, farbe);
+      knochen(wx, wy, wx + dx * W.laenge * sk, wy + dy * W.laenge * sk, 7, farbeWaffe);
       // Parierstange quer zur Klinge
-      knochen(wx - dy * 10 * sk, wy + dx * 10 * sk, wx + dy * 10 * sk, wy - dx * 10 * sk, 5, farbe);
+      knochen(wx - dy * 10 * sk, wy + dx * 10 * sk, wx + dy * 10 * sk, wy - dx * 10 * sk, 5, farbeWaffe);
+    } else if (waffe === 'dolch') {
+      // Kurze Klinge ohne Parierstange — schnell und unauffällig
+      knochen(wx, wy, wx + dx * W.laenge * sk, wy + dy * W.laenge * sk, 5, farbeWaffe);
     } else if (waffe === 'stab') {
       // Der Stab wird etwa mittig gehalten und ragt nach beiden Seiten hinaus
       knochen(
         wx - dx * W.laenge * 0.35 * sk, wy - dy * W.laenge * 0.35 * sk,
         wx + dx * W.laenge * 0.65 * sk, wy + dy * W.laenge * 0.65 * sk,
-        6, farbe,
+        6, farbeWaffe,
       );
     }
   };
@@ -72,9 +75,10 @@ export function zeichneSkelett(ctx, x, fussY, blick, pose, optionen = {}) {
   };
 
   // Hintere Gliedmaßen minimal heller — gibt der Silhouette Tiefe.
+  // Charaktere können eine eigene Grundfarbe haben (z. B. der violette Endboss).
   // Bei einem Treffer wird die ganze Figur kurz eingefärbt (Hit-Flash).
-  const hinten = einfaerbung ?? '#1f1f28';
-  const vorn = einfaerbung ?? '#0a0a0f';
+  const hinten = einfaerbung ?? farbe?.hinten ?? '#1f1f28';
+  const vorn = einfaerbung ?? farbe?.vorn ?? '#0a0a0f';
 
   bein(pose.hHuefte, pose.hKnie, hinten);
   arm(pose.hSchulter, pose.hEllbogen, hinten);
@@ -94,6 +98,16 @@ export function zeichneSkelett(ctx, x, fussY, blick, pose, optionen = {}) {
   if (extras.includes('zopf')) {
     const bx = kx - blick * s.kopfRadius * 0.6 * sk;
     knochen(bx, ky - 6 * sk, bx - blick * 11 * sk, ky + 14 * sk, 5, vorn);
+  }
+  if (extras.includes('irokese')) {
+    // drei kurze Stachel auf dem Kopf
+    for (let i = -1; i <= 1; i++) {
+      knochen(
+        kx + blick * i * 5 * sk, ky - s.kopfRadius * sk * 0.6,
+        kx + blick * i * 8 * sk, ky - (s.kopfRadius + 9) * sk,
+        4, vorn,
+      );
+    }
   }
   if (extras.includes('kapuze')) {
     ctx.fillStyle = vorn;

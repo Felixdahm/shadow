@@ -16,6 +16,8 @@ function pruefeTreffer(angreifer, ziel, ereignisse) {
   if (angreifer.hatGetroffen) return;
   if (angreifer.zustandZeit < A.aktivVon || angreifer.zustandZeit > A.aktivBis) return;
   if (!ziel.lebt()) return;
+  // Während des Schattenschritts ist der Boss unverwundbar
+  if (ziel.zustand === 'schatten') return;
   // Werfen kann man nur jemanden, der am Boden steht
   if (angreifer.zustand === 'wurf' && !ziel.amBoden()) return;
 

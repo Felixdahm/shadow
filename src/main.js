@@ -348,9 +348,17 @@ function renderMenue() {
   zeichneStage(ctx, drift, arena);
   zeichneVordergrund(ctx, drift, arena);
 
-  if (modus === 'menue') zeichneMenue(ctx, menueIndex, menueZeit);
-  else if (modus === 'story') zeichneStory(ctx, STORY[GEGNER_PFAD[gegnerIndex]]);
-  else zeichneGegnerWahl(ctx, CHARAKTERE[GEGNER_PFAD[wahlIndex]], menueZeit);
+  if (modus === 'menue') {
+    zeichneMenue(ctx, menueIndex, menueZeit);
+  } else if (modus === 'story') {
+    const karte = {
+      stationen: GEGNER_PFAD.map((id) => CHARAKTERE[id].name),
+      aktuell: gegnerIndex,
+    };
+    zeichneStory(ctx, STORY[GEGNER_PFAD[gegnerIndex]], karte);
+  } else {
+    zeichneGegnerWahl(ctx, CHARAKTERE[GEGNER_PFAD[wahlIndex]], menueZeit);
+  }
 }
 
 function render() {
