@@ -214,6 +214,11 @@ function textBlock(ctx, text, y, maxBreite, zeilenHoehe) {
   return y;
 }
 
+// Generiertes Titelbild fürs Hauptmenü (Fallback: Arena-Kulisse scheint durch)
+const TITELBILD = { img: new Image(), bereit: false };
+TITELBILD.img.onload = () => { TITELBILD.bereit = true; };
+TITELBILD.img.src = 'assets/ui/titelbild.png';
+
 // Splitter-Kontostand oben rechts (Menü-Bildschirme)
 function zeichneSplitter(ctx, splitter) {
   ctx.fillStyle = '#ffd27d';
@@ -224,7 +229,12 @@ function zeichneSplitter(ctx, splitter) {
 
 export function zeichneMenue(ctx, eintraege, auswahl, zeit, splitter) {
   const mitte = CONFIG.canvas.breite / 2;
-  schleier(ctx, 0.45);
+  if (TITELBILD.bereit) {
+    ctx.drawImage(TITELBILD.img, 0, 0, CONFIG.canvas.breite, CONFIG.canvas.hoehe);
+    schleier(ctx, 0.22); // nur leicht abdunkeln, damit der Text lesbar bleibt
+  } else {
+    schleier(ctx, 0.45);
+  }
   zeichneSplitter(ctx, splitter);
 
   // Titel "atmet" ganz leicht
