@@ -77,6 +77,10 @@ export function kiEingabe(ich, gegner, dt) {
       // Bewaffnete schlagen lieber (mehr Reichweite), Unbewaffnete treten öfter
       if (Math.random() < (ich.waffenDaten ? 0.65 : 0.5)) e.schlag = true;
       else e.tritt = true;
+      // Ab und zu Richtungs-Attacken: Sturmstoß, Uppercut oder Fegetritt
+      const extra = Math.random();
+      if (extra < 0.2) e[gegnerIstRechts ? 'rechts' : 'links'] = true;
+      else if (extra < 0.35) e.ducken = true;
     } else if (wuerfel < stil.angriffsLust + stil.blockNeigung * 0.3) {
       e.block = true;
     } else if (wuerfel < stil.angriffsLust + stil.blockNeigung * 0.3 + stil.rueckzug) {

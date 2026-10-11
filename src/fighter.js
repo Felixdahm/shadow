@@ -54,7 +54,12 @@ export class Kaempfer {
 
   // Boden-Angriffe (der Flugkick hat einen eigenen Zweig, weil Schwerkraft wirkt)
   istAngriff() {
-    return ['schlag', 'schlag2', 'tritt', 'spezial', 'wurf'].includes(this.zustand);
+    return this.zustand !== 'luftTritt' && CONFIG.angriffe[this.zustand] !== undefined;
+  }
+
+  // Grund-Schlag hängt von der Waffe ab: Faust, Schwert-Hieb, Stab-Feger, Dolch-Stich
+  basisSchlag() {
+    return this.charakter.waffe ? `hieb_${this.charakter.waffe}` : 'schlag';
   }
 
   wechsle(zustand) {
@@ -63,13 +68,13 @@ export class Kaempfer {
     this.hatGetroffen = false;
     this.uebergangVon = this.letztePose;
     this.uebergangZeit = 0;
-    if (['schlag', 'schlag2', 'tritt', 'wurf', 'luftTritt', 'rolle', 'salto'].includes(zustand)) {
-      spieleSchwung();
-    } else if (zustand === 'spezial') {
+    if (zustand === 'spezial') {
       spieleSpezialStart();
     } else if (zustand === 'schatten') {
       this.teleportiert = false;
       spieleTeleport();
+    } else if (CONFIG.angriffe[zustand] || zustand === 'rolle' || zustand === 'salto') {
+      spieleSchwung();
     } else {
       this.kombo = 0;
     }
@@ -146,8 +151,8 @@ export class Kaempfer {
         this.vx = 0;
       } else {
         const K = CONFIG.kombo;
-        // Ausfallschritt nach vorn; in der Kette größer, damit man am Gegner dranbleibt
-        const schritt = this.kombo > 0 ? K.kettenAusfall : 90;
+        // Ausfallschritt nach vorn; manche Angriffe (Sturmstoß!) haben ihren eigenen
+        const schritt = A.ausfall ?? (this.kombo > 0 ? K.kettenAusfall : 90);
         this.vx = this.zustandZeit < A.aktivBis ? this.blick * schritt : 0;
 
         // Treffer-Cancel: Hat der Angriff GETROFFEN, darf sofort nach dem Einschlag
@@ -160,9 +165,10 @@ export class Kaempfer {
         if (wunsch && wunsch !== 'spezial' && this.kombo < K.maxKette - 1 && this.zustandZeit >= kettenFenster) {
           this.kombo++;
           this.aktionsPuffer = null;
-          // Schlag auf Schlag wechselt die Faust: gerader Stoß → Haken → gerader Stoß
-          let naechster = wunsch;
-          if (naechster === 'schlag' && this.zustand === 'schlag') naechster = 'schlag2';
+          // Waffen-Hieb auf Waffen-Hieb wechselt zur freien Faust (Haken) und zurück —
+          // so wechseln sich Waffe und Faust in der Kette sichtbar ab
+          let naechster = wunsch === 'schlag' ? this.basisSchlag() : wunsch;
+          if (wunsch === 'schlag' && this.zustand === this.basisSchlag()) naechster = 'schlag2';
           this.wechsle(naechster);
           // Folgeangriffe starten schon halb ausgeholt — das macht die Kette schnell
           this.zustandZeit = K.kettenVorlauf;
@@ -242,13 +248,24 @@ export class Kaempfer {
       this.wechsle('spezial');
     } else if (wunsch === 'schlag' || wunsch === 'tritt') {
       this.aktionsPuffer = null;
+      // Richtung + Angriff = eigene Attacke (wie in großen Kampfspielen)
+      const vorwaerts = (eingabe.rechts && this.blick === 1) || (eingabe.links && this.blick === -1);
       const W = CONFIG.angriffe.wurf;
       const wurfNah = Math.abs(gegner.x - this.x) < W.reichweite;
-      if (wunsch === 'schlag' && gegner.zustand === 'block' && gegner.amBoden() && wurfNah) {
-        // Schlag gegen einen blockenden Gegner in Reichweite → Wurf (durchbricht den Block)
-        this.wechsle('wurf');
+      if (wunsch === 'schlag') {
+        if (gegner.zustand === 'block' && gegner.amBoden() && wurfNah) {
+          this.wechsle('wurf'); // Blocker werden geworfen
+        } else if (eingabe.ducken) {
+          this.wechsle('aufwaerts'); // ↓+Schlag: Uppercut, schleudert in die Luft
+        } else if (vorwaerts) {
+          this.wechsle('sturm'); // vorwärts+Schlag: Dash-Ramme
+        } else {
+          this.wechsle(this.basisSchlag()); // Waffen-Hieb bzw. Fauststoß
+        }
+      } else if (eingabe.ducken) {
+        this.wechsle('fege'); // ↓+Tritt: tiefer Fegetritt, streckt nieder
       } else {
-        this.wechsle(wunsch);
+        this.wechsle('tritt');
       }
     } else if (eingabe.springen) {
       this.vy = -CONFIG.kaempfer.sprungKraft;

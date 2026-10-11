@@ -7,7 +7,7 @@
 
 export const CHARAKTERE = {
   juro: {
-    farben: { haut: '#e8b48a', oben: '#2c3a5e', unten: '#1f2a45', akzent: '#c43b3b' },
+    farben: { haut: '#e8b48a', oben: '#2c3a5e', unten: '#1f2a45', akzent: '#c43b3b', haar: '#222b3f' },
     name: 'Juro',
     skalierung: 1,
     tempoFaktor: 1,
@@ -31,7 +31,7 @@ export const CHARAKTERE = {
     beschreibung: 'Wächter des Aschenpasses · unbewaffnet · ausgewogen',
   },
   veyra: {
-    farben: { haut: '#e6c3a0', oben: '#2e6e6a', unten: '#234f4d', akzent: '#b8c4cc' },
+    farben: { haut: '#e6c3a0', oben: '#2e6e6a', unten: '#234f4d', akzent: '#b8c4cc', haar: '#241a2e' },
     name: 'Veyra',
     skalierung: 0.9,
     tempoFaktor: 1.3,
@@ -101,9 +101,9 @@ export const STORY = {
 // Der Ausrüstungs-Laden: Waffen verändern Juros Kampfwerte,
 // Stile nur seine Silhouette. Preise in Schatten-Splittern ◆.
 export const WAFFEN_LADEN = [
-  { id: 'schwert', name: 'Schwert', preis: 0,   info: 'Ausgewogen — gute Reichweite, guter Schaden' },
-  { id: 'dolch',   name: 'Dolch',   preis: 100, info: 'Kurze Klinge, aber du läufst 12 % schneller' },
-  { id: 'stab',    name: 'Stab',    preis: 140, info: 'Riesige Reichweite, wenig Bonus-Schaden' },
+  { id: 'schwert', name: 'Schwert', preis: 0,   info: 'Eigener Hieb: weiter Überkopf-Schlag, hoher Schaden' },
+  { id: 'dolch',   name: 'Dolch',   preis: 100, info: 'Eigener Hieb: blitzschnelle Stiche · +12 % Lauftempo' },
+  { id: 'stab',    name: 'Stab',    preis: 140, info: 'Eigener Hieb: fegender Rundumschlag, Riesen-Reichweite' },
 ];
 
 export const STIL_LADEN = [

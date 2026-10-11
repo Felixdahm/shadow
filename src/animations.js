@@ -40,6 +40,28 @@ const SCHLAG_TREFFEN   = p({ vSchulter: 1.55, vEllbogen: 0.06, rumpf: 0.3, kopf:
 const SCHLAG_DURCHZUG  = p({ vSchulter: 1.72, vEllbogen: 0.18, rumpf: 0.36, kopf: -0.12, hSchulter: 0.8, hEllbogen: 2.0, hueftFaktor: 0.92, vHuefte: 0.5, hHuefte: -0.4 });
 const SCHLAG_ZURUECK   = p({ vSchulter: 1.05, vEllbogen: 1.0, rumpf: 0.18, hueftFaktor: 0.95 });
 
+// Schwert-Hieb: über den Kopf ausholen und nach vorn durchziehen
+const HIEB_AUSHOLEN  = p({ vSchulter: 3.3, vEllbogen: -0.5, rumpf: -0.15, kopf: 0.1, hueftFaktor: 0.95, hHuefte: -0.35, hKnie: 0.45 });
+const HIEB_TREFFEN   = p({ vSchulter: 1.3, vEllbogen: 0.1, rumpf: 0.4, kopf: -0.1, vHuefte: 0.55, hHuefte: -0.45, hueftFaktor: 0.9 });
+const HIEB_DURCHZUG  = p({ vSchulter: 0.75, vEllbogen: 0.25, rumpf: 0.45, kopf: -0.12, hueftFaktor: 0.88 });
+
+// Stab-Hieb: weit hinten ausholen und flach nach vorn fegen
+const STAB_AUSHOLEN  = p({ vSchulter: -1.3, vEllbogen: 0.3, rumpf: -0.2, kopf: 0.1, hueftFaktor: 0.92 });
+const STAB_TREFFEN   = p({ vSchulter: 1.55, vEllbogen: 0.05, rumpf: 0.3, kopf: -0.1, vHuefte: 0.5, hHuefte: -0.4, hueftFaktor: 0.9 });
+const STAB_DURCHZUG  = p({ vSchulter: 2.1, vEllbogen: 0.15, rumpf: 0.2, hueftFaktor: 0.92 });
+
+// Uppercut (↓+Schlag): aus der Hocke nach oben reißen — schleudert den Gegner hoch
+const AUFWAERTS_LADEN   = p({ hueftFaktor: 0.6, rumpf: 0.35, vSchulter: -0.3, vEllbogen: 2.3, vHuefte: 0.9, vKnie: 1.6, hHuefte: 0.4, hKnie: 1.2 });
+const AUFWAERTS_TREFFEN = p({ hueftFaktor: 1, rumpf: -0.2, kopf: -0.15, vSchulter: 2.6, vEllbogen: 0.3, vHuefte: 0.4, hHuefte: -0.35 });
+
+// Sturmstoß (vorwärts+Schlag): Schulter voran nach vorn rammen
+const STURM_LADEN   = p({ rumpf: -0.12, vSchulter: -0.4, vEllbogen: 1.6, hueftFaktor: 0.9 });
+const STURM_TREFFEN = p({ rumpf: 0.45, kopf: -0.1, vSchulter: 1.2, vEllbogen: 0.6, vHuefte: 0.7, hHuefte: -0.6, hueftFaktor: 0.85 });
+
+// Fegetritt (↓+Tritt): tief bleiben und das Bein flach durchziehen
+const FEGE_LADEN   = p({ hueftFaktor: 0.55, rumpf: 0.4, vHuefte: 1.0, vKnie: 1.9, hHuefte: 0.5, hKnie: 1.5 });
+const FEGE_TREFFEN = p({ hueftFaktor: 0.5, rumpf: 0.5, kopf: -0.2, vHuefte: 1.3, vKnie: 0.1, hHuefte: 0.6, hKnie: 1.6, vSchulter: 0.9, hSchulter: -0.3 });
+
 // Zweiter Schlag der Kombo: die HINTERE Faust stößt vor (Haken) —
 // so wechseln die Arme sichtbar ab, statt denselben Schlag zu wiederholen.
 const SCHLAG2_AUSHOLEN = p({ hSchulter: -0.15, hEllbogen: 2.6, vSchulter: 0.7, vEllbogen: 2.0, rumpf: -0.08, hueftFaktor: 0.94 });
@@ -132,6 +154,48 @@ export const ANIMATIONEN = {
     { t: 0.2, pose: SCHLAG_DURCHZUG, art: 'weich' },
     { t: 0.28, pose: SCHLAG_ZURUECK, art: 'weich' },
     { t: 0.38, pose: STAND, art: 'weich' },
+  ] },
+  hieb_schwert: { dauer: 0.46, loop: false, frames: [
+    { t: 0, pose: STAND },
+    { t: 0.14, pose: HIEB_AUSHOLEN, art: 'weich' },
+    { t: 0.2, pose: HIEB_TREFFEN, art: 'zack' },
+    { t: 0.32, pose: HIEB_DURCHZUG, art: 'weich' },
+    { t: 0.46, pose: STAND, art: 'weich' },
+  ] },
+  hieb_stab: { dauer: 0.5, loop: false, frames: [
+    { t: 0, pose: STAND },
+    { t: 0.15, pose: STAB_AUSHOLEN, art: 'weich' },
+    { t: 0.22, pose: STAB_TREFFEN, art: 'zack' },
+    { t: 0.34, pose: STAB_DURCHZUG, art: 'weich' },
+    { t: 0.5, pose: STAND, art: 'weich' },
+  ] },
+  hieb_dolch: { dauer: 0.3, loop: false, frames: [
+    { t: 0, pose: STAND },
+    { t: 0.06, pose: SCHLAG_AUSHOLEN, art: 'weich' },
+    { t: 0.1, pose: SCHLAG_TREFFEN, art: 'zack' },
+    { t: 0.2, pose: SCHLAG_ZURUECK, art: 'weich' },
+    { t: 0.3, pose: STAND, art: 'weich' },
+  ] },
+  aufwaerts: { dauer: 0.42, loop: false, frames: [
+    { t: 0, pose: STAND },
+    { t: 0.1, pose: AUFWAERTS_LADEN, art: 'weich' },
+    { t: 0.16, pose: AUFWAERTS_TREFFEN, art: 'zack' },
+    { t: 0.28, pose: AUFWAERTS_TREFFEN, art: 'weich' },
+    { t: 0.42, pose: STAND, art: 'weich' },
+  ] },
+  sturm: { dauer: 0.44, loop: false, frames: [
+    { t: 0, pose: STAND },
+    { t: 0.12, pose: STURM_LADEN, art: 'weich' },
+    { t: 0.18, pose: STURM_TREFFEN, art: 'zack' },
+    { t: 0.3, pose: STURM_TREFFEN, art: 'weich' },
+    { t: 0.44, pose: STAND, art: 'weich' },
+  ] },
+  fege: { dauer: 0.46, loop: false, frames: [
+    { t: 0, pose: STAND },
+    { t: 0.1, pose: FEGE_LADEN, art: 'weich' },
+    { t: 0.17, pose: FEGE_TREFFEN, art: 'zack' },
+    { t: 0.28, pose: FEGE_TREFFEN, art: 'weich' },
+    { t: 0.46, pose: STAND, art: 'weich' },
   ] },
   schlag2: { dauer: 0.38, loop: false, frames: [
     { t: 0, pose: STAND },

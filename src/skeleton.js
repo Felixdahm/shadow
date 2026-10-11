@@ -15,14 +15,13 @@ const WAFFEN_FARBEN = {
   stab: '#6b4a32',
 };
 
-// Zeichnet einen Kämpfer als schwarze Silhouette aus dicken, runden Linien.
-// Winkel-Konvention: 0 = senkrecht (Gliedmaßen hängen nach unten, Rumpf zeigt nach oben),
-// positive Winkel drehen nach vorn in Blickrichtung. So funktioniert die Pose
-// unabhängig davon, ob der Kämpfer nach links oder rechts schaut.
+// Zeichnet einen Kämpfer als farbige Figur: geformter Oberkörper, Becken,
+// Gürtel, Fäuste, Schuhe und Haar — kein Strichmännchen mehr.
+// Winkel-Konvention: 0 = senkrecht (Gliedmaßen hängen nach unten, Rumpf zeigt
+// nach oben), positive Winkel drehen nach vorn in Blickrichtung.
 //
-// optionen: { einfaerbung, skalierung, waffe, extras }
-// skalierung streckt das ganze Skelett — so entstehen große und kleine Figuren
-// aus denselben Posen.
+// optionen: { einfaerbung, skalierung, waffe, extras, farben }
+// farben = { haut, oben, unten, akzent, haar? }
 export function zeichneSkelett(ctx, x, fussY, blick, pose, optionen = {}) {
   const { einfaerbung = null, skalierung = 1, waffe = null, extras = [], farben = null } = optionen;
   const s = CONFIG.skelett;
@@ -46,70 +45,105 @@ export function zeichneSkelett(ctx, x, fussY, blick, pose, optionen = {}) {
     ctx.stroke();
   };
 
+  const kreis = (cx, cy, r, farbe) => {
+    ctx.fillStyle = farbe;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+  };
+
   // Rumpf hoch zur Schulter, darüber der Kopf
   const [sx, sy] = ende(hx, hy, pose.rumpf, s.rumpfLaenge, true);
   const [kx, ky] = ende(sx, sy, pose.rumpf + pose.kopf, s.halsLaenge + s.kopfRadius, true);
 
-  const zeichneWaffe = (wx, wy, winkel, farbeWaffe) => {
+  // Farb-Satz: Hit-Flash färbt alles ein, sonst die Charakter-Palette
+  const basis = farben ?? { haut: '#0a0a0f', oben: '#0a0a0f', unten: '#0a0a0f', akzent: '#1f1f28', haar: null };
+  const F = einfaerbung
+    ? { haut: einfaerbung, oben: einfaerbung, unten: einfaerbung, akzent: einfaerbung, haar: null, waffe: einfaerbung }
+    : { haar: null, ...basis, waffe: WAFFEN_FARBEN[waffe] ?? '#aeb6c4' };
+  const hinten = (farbe, faktor) => einfaerbung ?? dunkler(farbe, faktor);
+  const obenHinten = hinten(basis.oben, 0.62);
+  const untenHinten = hinten(basis.unten, 0.62);
+  const hautHinten = hinten(basis.haut, 0.62);
+  const schuhVorn = hinten(basis.unten, 0.45);
+  const schuhHinten = hinten(basis.unten, 0.3);
+
+  const zeichneWaffe = (wx, wy, winkel) => {
     const W = CONFIG.waffen[waffe];
     // Richtung, in die der Unterarm zeigt — die Waffe verlängert ihn
     const dx = Math.sin(winkel) * blick;
     const dy = Math.cos(winkel);
     if (waffe === 'schwert') {
-      knochen(wx, wy, wx + dx * W.laenge * sk, wy + dy * W.laenge * sk, 7, farbeWaffe);
+      knochen(wx, wy, wx + dx * W.laenge * sk, wy + dy * W.laenge * sk, 7, F.waffe);
       // Parierstange quer zur Klinge
-      knochen(wx - dy * 10 * sk, wy + dx * 10 * sk, wx + dy * 10 * sk, wy - dx * 10 * sk, 5, farbeWaffe);
+      knochen(wx - dy * 10 * sk, wy + dx * 10 * sk, wx + dy * 10 * sk, wy - dx * 10 * sk, 5, F.waffe);
     } else if (waffe === 'dolch') {
-      // Kurze Klinge ohne Parierstange — schnell und unauffällig
-      knochen(wx, wy, wx + dx * W.laenge * sk, wy + dy * W.laenge * sk, 5, farbeWaffe);
+      knochen(wx, wy, wx + dx * W.laenge * sk, wy + dy * W.laenge * sk, 5, F.waffe);
     } else if (waffe === 'stab') {
       // Der Stab wird etwa mittig gehalten und ragt nach beiden Seiten hinaus
       knochen(
         wx - dx * W.laenge * 0.35 * sk, wy - dy * W.laenge * 0.35 * sk,
         wx + dx * W.laenge * 0.65 * sk, wy + dy * W.laenge * 0.65 * sk,
-        6, farbeWaffe,
+        6, F.waffe,
       );
     }
   };
 
-  const arm = (schulter, ellbogen, farbe, mitWaffe = false) => {
+  const arm = (schulter, ellbogen, farbe, faustFarbe, mitWaffe = false) => {
     const [ex, ey] = ende(sx, sy, schulter, s.oberarm);
     const unterarmWinkel = schulter + ellbogen;
     const [wx, wy] = ende(ex, ey, unterarmWinkel, s.unterarm);
     knochen(sx, sy, ex, ey, s.linienBreite, farbe);
     knochen(ex, ey, wx, wy, s.linienBreite, farbe);
-    if (mitWaffe && waffe) zeichneWaffe(wx, wy, unterarmWinkel, f.waffe);
+    kreis(wx, wy, s.linienBreite * 0.55 * sk, faustFarbe); // Faust
+    if (mitWaffe && waffe) zeichneWaffe(wx, wy, unterarmWinkel);
   };
 
-  const bein = (huefte, knie, farbe) => {
+  const bein = (huefte, knie, farbe, schuhFarbe) => {
     // Das Knie beugt nach hinten, deshalb wird der Knie-Winkel abgezogen.
     const [ex, ey] = ende(hx, hy, huefte, s.oberschenkel);
     const [fx, fy] = ende(ex, ey, huefte - knie, s.unterschenkel);
     knochen(hx, hy, ex, ey, s.linienBreite * 1.1, farbe);
     knochen(ex, ey, fx, fy, s.linienBreite * 1.1, farbe);
+    knochen(fx, fy, fx + blick * 9 * sk, fy, s.linienBreite * 0.9, schuhFarbe); // Schuh
   };
 
-  // Echte Charakter-Farben: Haut, Oberkörper, Beine, Akzent.
-  // Hintere Gliedmaßen etwas dunkler — gibt der Figur Tiefe.
-  // Bei einem Treffer wird die ganze Figur kurz eingefärbt (Hit-Flash).
-  const basis = farben ?? { haut: '#0a0a0f', oben: '#0a0a0f', unten: '#0a0a0f', akzent: '#1f1f28' };
-  const f = einfaerbung
-    ? { haut: einfaerbung, oben: einfaerbung, unten: einfaerbung, akzent: einfaerbung, waffe: einfaerbung }
-    : { ...basis, waffe: WAFFEN_FARBEN[waffe] ?? '#aeb6c4' };
-  const obenHinten = einfaerbung ?? dunkler(basis.oben, 0.62);
-  const untenHinten = einfaerbung ?? dunkler(basis.unten, 0.62);
-  const vorn = f.akzent; // für Extras
+  // ---- Hintere Gliedmaßen (dunkler → Tiefe) ----
+  bein(pose.hHuefte, pose.hKnie, untenHinten, schuhHinten);
+  arm(pose.hSchulter, pose.hEllbogen, obenHinten, hautHinten);
 
-  bein(pose.hHuefte, pose.hKnie, untenHinten);
-  arm(pose.hSchulter, pose.hEllbogen, obenHinten);
-
-  knochen(hx, hy, sx, sy, s.linienBreite * 1.7, f.oben);
-  ctx.fillStyle = f.haut;
+  // ---- Rumpf als Form: breite Schultern, schmale Hüfte ----
+  const tx = sx - hx;
+  const ty = sy - hy;
+  const tl = Math.hypot(tx, ty) || 1;
+  const qx = -ty / tl; // senkrecht zur Rumpf-Achse
+  const qy = tx / tl;
+  const schulterBreite = s.linienBreite * 1.05 * sk;
+  const hueftBreite = s.linienBreite * 0.78 * sk;
+  ctx.fillStyle = F.oben;
   ctx.beginPath();
-  ctx.arc(kx, ky, s.kopfRadius * sk, 0, Math.PI * 2);
+  ctx.moveTo(sx + qx * schulterBreite, sy + qy * schulterBreite);
+  ctx.lineTo(sx - qx * schulterBreite, sy - qy * schulterBreite);
+  ctx.lineTo(hx - qx * hueftBreite, hy - qy * hueftBreite);
+  ctx.lineTo(hx + qx * hueftBreite, hy + qy * hueftBreite);
+  ctx.closePath();
   ctx.fill();
+  kreis(sx, sy, schulterBreite, F.oben);  // runde Schulterpartie
+  kreis(hx, hy, hueftBreite, F.unten);    // Becken in Hosenfarbe
+  // Gürtel an der Hüfte
+  knochen(hx - qx * hueftBreite * 1.15, hy - qy * hueftBreite * 1.15, hx + qx * hueftBreite * 1.15, hy + qy * hueftBreite * 1.15, 4.5, F.akzent);
 
-  // Silhouetten-Extras: kleine Umriss-Details machen aus demselben Skelett andere Figuren
+  // ---- Kopf mit Haar ----
+  kreis(kx, ky, s.kopfRadius * sk, F.haut);
+  if (F.haar) {
+    ctx.fillStyle = F.haar;
+    ctx.beginPath();
+    ctx.arc(kx, ky - 1 * sk, s.kopfRadius * sk * 1.05, Math.PI * 0.95, Math.PI * 2.05);
+    ctx.fill();
+  }
+
+  // ---- Extras (in der Akzentfarbe) ----
+  const vorn = F.akzent;
   if (extras.includes('stirnband')) {
     const bx = kx - blick * s.kopfRadius * sk;
     knochen(bx, ky, bx - blick * 16 * sk, ky + 4 * sk, 3, vorn);
@@ -139,6 +173,7 @@ export function zeichneSkelett(ctx, x, fussY, blick, pose, optionen = {}) {
     ctx.fill();
   }
 
-  bein(pose.vHuefte, pose.vKnie, f.unten);
-  arm(pose.vSchulter, pose.vEllbogen, f.oben, true); // Waffe liegt in der vorderen Hand
+  // ---- Vordere Gliedmaßen (volle Farben, Waffe in der vorderen Hand) ----
+  bein(pose.vHuefte, pose.vKnie, F.unten, schuhVorn);
+  arm(pose.vSchulter, pose.vEllbogen, F.oben, einfaerbung ?? basis.haut, true);
 }

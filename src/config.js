@@ -44,6 +44,16 @@ export const CONFIG = {
     luftTritt: { dauer: 0.5, aktivVon: 0.08, aktivBis: 0.3, schaden: 10, reichweite: 88, hoeheVomBoden: 40, rueckstoss: 300 },
     // Wurf: Konter gegen Dauerblocker — durchbricht den Block, braucht Nähe
     wurf: { dauer: 0.55, aktivVon: 0.22, aktivBis: 0.34, schaden: 10, reichweite: 90, hoeheVomBoden: 110, rueckstoss: 540 },
+
+    // Waffen-eigene Hiebe (ersetzen den Faust-Schlag, wenn eine Waffe getragen wird)
+    hieb_schwert: { dauer: 0.46, aktivVon: 0.16, aktivBis: 0.3,  schaden: 13, reichweite: 125, hoeheVomBoden: 135, rueckstoss: 220 },
+    hieb_stab:    { dauer: 0.5,  aktivVon: 0.18, aktivBis: 0.32, schaden: 10, reichweite: 150, hoeheVomBoden: 115, rueckstoss: 260 },
+    hieb_dolch:   { dauer: 0.3,  aktivVon: 0.08, aktivBis: 0.17, schaden: 9,  reichweite: 85,  hoeheVomBoden: 135, rueckstoss: 140 },
+
+    // Richtungs-Attacken: ↓+Schlag, vorwärts+Schlag, ↓+Tritt
+    aufwaerts: { dauer: 0.42, aktivVon: 0.12, aktivBis: 0.22, schaden: 10, reichweite: 70, hoeheVomBoden: 120, rueckstoss: 100, knockup: 540, ausfall: 40 },
+    sturm:     { dauer: 0.44, aktivVon: 0.14, aktivBis: 0.28, schaden: 11, reichweite: 95, hoeheVomBoden: 130, rueckstoss: 320, ausfall: 300 },
+    fege:      { dauer: 0.46, aktivVon: 0.14, aktivBis: 0.26, schaden: 8,  reichweite: 95, hoeheVomBoden: 30,  rueckstoss: 180, niederschlag: true, ausfall: 60 },
   },
 
   // Spezialangriff "Schattenstoß": braucht eine volle Energie-Leiste,
@@ -75,10 +85,11 @@ export const CONFIG = {
   },
 
   // Waffen verstärken nur den Arm-Angriff (Schlag wird zum Hieb)
+  // Waffen-Werte stecken in den hieb_*-Angriffen; hier nur Optik + Boni
   waffen: {
-    schwert: { laenge: 55, reichweiteBonus: 45, schadenBonus: 4 },
-    stab:    { laenge: 95, reichweiteBonus: 55, schadenBonus: 2 },
-    dolch:   { laenge: 30, reichweiteBonus: 15, schadenBonus: 2, tempoBonus: 0.12 },
+    schwert: { laenge: 55 },
+    stab:    { laenge: 95 },
+    dolch:   { laenge: 30, tempoBonus: 0.12 },
   },
 
   // Schwierigkeitsgrade wirken nur auf die KI-Gegner

@@ -21,9 +21,9 @@ function pruefeTreffer(angreifer, ziel, ereignisse) {
   // Werfen kann man nur jemanden, der am Boden steht
   if (angreifer.zustand === 'wurf' && !ziel.amBoden()) return;
 
-  // Waffen zählen nur beim Arm-Angriff (Schlag); Größe skaliert die Reichweite mit
-  const waffe = angreifer.zustand === 'schlag' ? angreifer.waffenDaten : null;
-  const reichweite = (A.reichweite + (waffe?.reichweiteBonus ?? 0)) * angreifer.skalierung;
+  // Die Reichweite steckt komplett im jeweiligen Angriff (hieb_schwert usw.);
+  // die Körpergröße skaliert sie mit
+  const reichweite = A.reichweite * angreifer.skalierung;
 
   // Hitbox: Bereich vor dem Angreifer auf Schlag- bzw. Tritthöhe
   const vorderkante = angreifer.x + angreifer.blick * 18;
@@ -61,7 +61,7 @@ function pruefeTreffer(angreifer, ziel, ereignisse) {
   // Finisher: der 3. Schlag einer Kette haut deutlich härter rein
   const finisher = !istSpezial && !istWurf && angreifer.kombo >= K2.maxKette - 1;
 
-  let basisSchaden = (A.schaden + (waffe?.schadenBonus ?? 0)) * angreifer.charakter.schadenFaktor * spamFaktor;
+  let basisSchaden = A.schaden * angreifer.charakter.schadenFaktor * spamFaktor;
   if (finisher) basisSchaden *= K2.finisherSchaden;
   basisSchaden = Math.round(basisSchaden);
 
@@ -93,6 +93,13 @@ function pruefeTreffer(angreifer, ziel, ereignisse) {
     ziel.wechsle('treffer');
     // Der Finisher streckt länger nieder — Zeit, um Abstand zu gewinnen oder nachzusetzen
     if (finisher) ziel.zustandZeit = -0.2;
+    // Fegetritt streckt zusätzlich nieder
+    if (A.niederschlag) ziel.zustandZeit = -0.25;
+    // Uppercut schleudert den Gegner in die Luft (Weiterverfolgung mit Flugkick möglich!)
+    if (A.knockup) {
+      ziel.vy = -A.knockup;
+      ziel.y -= 2;
+    }
   }
 
   ereignisse.push({

@@ -1,7 +1,7 @@
 // Service Worker: speichert das komplette Spiel im Browser-Cache,
 // damit es installiert und offline gespielt werden kann.
 // Bei Änderungen die Versionsnummer erhöhen — dann wird neu gecacht.
-const CACHE = 'schattenpfad-v4';
+const CACHE = 'schattenpfad-v5';
 
 const KERN = [
   './',
