@@ -60,6 +60,18 @@ const BALL = p({
   hueftFaktor: 0.55,
 });
 
+// Flugkick: Bein nach vorn gestreckt, Körper leicht zurückgelehnt
+const LUFT_TRITT = p({
+  vHuefte: 1.35, vKnie: 0.1, hHuefte: -0.5, hKnie: 1.3,
+  rumpf: -0.3, kopf: 0.1,
+  vSchulter: 0.8, vEllbogen: 1.3, hSchulter: -0.2, hEllbogen: 0.8,
+  hueftFaktor: 1,
+});
+
+// Wurf: nach vorn greifen, dann den Gegner über die Schulter schleudern
+const WURF_GREIFEN = p({ vSchulter: 1.2, vEllbogen: 0.4, hSchulter: 1.0, hEllbogen: 0.5, rumpf: 0.35, hueftFaktor: 0.88, vHuefte: 0.5, hHuefte: -0.4 });
+const WURF_SCHLEUDERN = p({ vSchulter: -0.4, vEllbogen: 0.3, hSchulter: -0.6, hEllbogen: 0.4, rumpf: -0.25, kopf: -0.2, hueftFaktor: 0.92, vHuefte: 0.3, hHuefte: -0.5 });
+
 // Treffer-Reaktion mit leichtem Zurückfedern
 const TREFFER_POSE = p({ rumpf: -0.42, kopf: -0.35, vSchulter: 0.95, vEllbogen: 0.7, hSchulter: 0.5, hEllbogen: 0.4, vHuefte: 0.5, vKnie: 0.3, hHuefte: -0.4, hKnie: 0.5, hueftFaktor: 0.9 });
 const TREFFER_FEDERN = p({ rumpf: -0.15, kopf: -0.12, vSchulter: 0.8, vEllbogen: 1.2, hSchulter: 0.45, hEllbogen: 1.0, hueftFaktor: 0.93 });
@@ -127,6 +139,12 @@ export const ANIMATIONEN = {
   ] },
   salto: { dauer: 0.72, loop: false, frames: [
     { t: 0, pose: STAND }, { t: 0.1, pose: BALL, art: 'zack' }, { t: 0.55, pose: BALL }, { t: 0.72, pose: STAND, art: 'weich' },
+  ] },
+  luftTritt: { dauer: 0.5, loop: false, frames: [
+    { t: 0, pose: BALL }, { t: 0.08, pose: LUFT_TRITT, art: 'zack' }, { t: 0.5, pose: LUFT_TRITT },
+  ] },
+  wurf: { dauer: 0.55, loop: false, frames: [
+    { t: 0, pose: STAND }, { t: 0.18, pose: WURF_GREIFEN, art: 'weich' }, { t: 0.3, pose: WURF_SCHLEUDERN, art: 'zack' }, { t: 0.55, pose: STAND, art: 'weich' },
   ] },
   spezial: { dauer: 0.6, loop: false, frames: [
     { t: 0, pose: STAND },

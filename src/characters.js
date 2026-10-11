@@ -42,7 +42,7 @@ export const CHARAKTERE = {
     name: 'Dorn',
     skalierung: 1.12,
     tempoFaktor: 0.78,
-    schadenFaktor: 1.45,
+    schadenFaktor: 1.3,
     hpFaktor: 1.3,
     waffe: 'schwert',
     extras: ['kapuze'],

@@ -1,7 +1,10 @@
 import { CONFIG } from './config.js';
 import { zeichneSkelett } from './skeleton.js';
 import { poseZumZeitpunkt } from './animations.js';
-import { TOUCH_BUTTONS, istGedrueckt, stickZustand } from './input.js';
+import { TOUCH_BUTTONS, istGedrueckt, stickZustand, istTouchAktiv } from './input.js';
+
+// Tipp-Bereich des MENÜ-Knopfs oben in der Mitte (Touch); main.js prüft Taps dagegen
+export const MENUE_KNOPF = { x: 415, y: 50, b: 130, h: 36 };
 
 const BALKEN_BREITE = 340;
 const BALKEN_HOEHE = 20;
@@ -76,11 +79,31 @@ export function zeichneUI(ctx, spiel) {
   lebensbalken(ctx, 40, 28, spiel.spieler, false);
   lebensbalken(ctx, breite - 40 - BALKEN_BREITE, 28, spiel.gegner, true);
 
-  // Fortschritt auf dem Schattenpfad
+  // Fortschritt auf dem Schattenpfad bzw. Trainings-Anzeige
   ctx.fillStyle = 'rgba(243, 233, 247, 0.75)';
   ctx.font = 'bold 15px system-ui, sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText(`Kampf ${spiel.kampfNummer} von ${spiel.kampfAnzahl}`, breite / 2, 42);
+  if (spiel.training) {
+    const modi = ['Steht still', 'Blockt', 'Kämpft'];
+    ctx.fillText(`TRAINING · Dummy: ${modi[spiel.trainingModus]}  (T / oben tippen)`, breite / 2, 42);
+  } else {
+    ctx.fillText(`Kampf ${spiel.kampfNummer} von ${spiel.kampfAnzahl}`, breite / 2, 42);
+  }
+
+  // Auf Touch-Geräten: MENÜ-Knopf, um den Kampf verlassen zu können
+  if (istTouchAktiv()) {
+    const K = MENUE_KNOPF;
+    ctx.fillStyle = 'rgba(10, 8, 18, 0.4)';
+    ctx.strokeStyle = 'rgba(243, 233, 247, 0.4)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(K.x, K.y, K.b, K.h, 10);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(243, 233, 247, 0.75)';
+    ctx.font = 'bold 14px system-ui, sans-serif';
+    ctx.fillText('✕ MENÜ', K.x + K.b / 2, K.y + 23);
+  }
 
   if (spiel.phase === 'intro') {
     if (spiel.phasenZeit < 0.85) {
@@ -199,7 +222,7 @@ export function zeichneMenue(ctx, auswahl, zeit) {
   ctx.fillText('SCHATTENPFAD', 0, 0);
   ctx.restore();
 
-  const eintraege = ['Story-Modus', 'Freier Kampf'];
+  const eintraege = ['Story-Modus', 'Freier Kampf', 'Training'];
   ctx.textAlign = 'center';
   eintraege.forEach((eintrag, i) => {
     const gewaehlt = i === auswahl;

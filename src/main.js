@@ -6,7 +6,7 @@ import { kiEingabe, leereEingabe } from './ai.js';
 import { wendePhysikAn, trenneKaempfer } from './physics.js';
 import { verarbeiteKampf } from './combat.js';
 import { zeichneStage, zeichneVordergrund } from './stage.js';
-import { zeichneUI, zeichneMenue, zeichneStory, zeichneGegnerWahl, zeichneTouchSteuerung } from './ui.js';
+import { zeichneUI, zeichneMenue, zeichneStory, zeichneGegnerWahl, zeichneTouchSteuerung, MENUE_KNOPF } from './ui.js';
 import { spawnTrefferFunken, updatePartikel, zeichnePartikel, leerePartikel } from './particles.js';
 import { spieleTreffer, spieleBlock, spieleKo, spieleGong, spieleSpezialTreffer } from './sound.js';
 
@@ -45,6 +45,35 @@ function neuerKampf() {
     naechsterGegner: naechsterName,
     arena: gegnerDaten.arena ?? 'aschenpass',
     storyModus,
+    training: false,
+    trainingModus: 0,
+  };
+  kamera.x = 0;
+  kamera.shake = 0;
+  leerePartikel();
+  modus = 'kampf';
+}
+
+// Trainings-Modus: Dummy-Gegner, kein K.O., HP regenerieren sich
+function neuesTraining() {
+  storyModus = false;
+  spiel = {
+    spieler: new Kaempfer(CHARAKTERE.juro, START_X_SPIELER, 1),
+    gegner: new Kaempfer(CHARAKTERE.scharr, START_X_GEGNER, -1),
+    runde: 1,
+    phase: 'kampf', // kein Intro — direkt loslegen
+    phasenZeit: 0,
+    hitstop: 0,
+    rundenSieger: null,
+    matchSieger: null,
+    spielerHatGewonnen: false,
+    kampfNummer: 1,
+    kampfAnzahl: 1,
+    naechsterGegner: null,
+    arena: 'aschenpass',
+    storyModus: false,
+    training: true,
+    trainingModus: 0, // 0 = steht, 1 = blockt, 2 = kämpft
   };
   kamera.x = 0;
   kamera.shake = 0;
@@ -82,22 +111,28 @@ function spielerEingabe() {
 // ---------- Menü- und Story-Logik ----------
 
 function updateMenue() {
-  if (verbraucheFrisch('ArrowUp')) menueIndex = (menueIndex + 1) % 2;
-  if (verbraucheFrisch('ArrowDown')) menueIndex = (menueIndex + 1) % 2;
+  const anzahl = 3;
+  if (verbraucheFrisch('ArrowUp')) menueIndex = (menueIndex + anzahl - 1) % anzahl;
+  if (verbraucheFrisch('ArrowDown')) menueIndex = (menueIndex + 1) % anzahl;
   // Touch: Tipp auf einen Menüeintrag wählt und bestätigt ihn
   const tap = verbraucheTap();
   let bestaetigt = verbraucheFrisch('Enter');
   if (tap) {
-    if (tap.y > 272 && tap.y <= 330) { menueIndex = 0; bestaetigt = true; }
-    else if (tap.y > 330 && tap.y < 390) { menueIndex = 1; bestaetigt = true; }
+    // Einträge stehen bei y = 300, 358, 416 (je ±28 Tipp-Toleranz)
+    for (let i = 0; i < anzahl; i++) {
+      const mitte = 300 + i * 58;
+      if (tap.y > mitte - 29 && tap.y <= mitte + 29) { menueIndex = i; bestaetigt = true; }
+    }
   }
   if (bestaetigt) {
     if (menueIndex === 0) {
       storyModus = true;
       gegnerIndex = 0;
       modus = 'story';
-    } else {
+    } else if (menueIndex === 1) {
       modus = 'gegnerWahl';
+    } else {
+      neuesTraining();
     }
   }
 }
@@ -131,21 +166,33 @@ function updateStory() {
 // ---------- Kampf-Logik ----------
 
 function updateKampf(dt) {
+  const tap = verbraucheTap();
+
   if (verbraucheFrisch('Escape')) {
     zumMenue();
     return;
   }
-  if (verbraucheFrisch('KeyR')) {
+  // Touch: MENÜ-Knopf oben in der Mitte verlässt den Kampf
+  if (tap && tap.x > MENUE_KNOPF.x && tap.x < MENUE_KNOPF.x + MENUE_KNOPF.b
+      && tap.y > MENUE_KNOPF.y && tap.y < MENUE_KNOPF.y + MENUE_KNOPF.h) {
+    zumMenue();
+    return;
+  }
+  // Training: T oder Tipp oben wechselt das Dummy-Verhalten
+  if (spiel.training && (verbraucheFrisch('KeyT') || (tap && tap.y < 140))) {
+    spiel.trainingModus = (spiel.trainingModus + 1) % 3;
+  }
+  if (verbraucheFrisch('KeyR') && !spiel.training) {
     if (spiel.phase === 'pfadEnde') { gegnerIndex = 0; zumMenue(); } else neuerKampf();
     return;
   }
-  if (spiel.phase === 'pfadEnde' && (verbraucheFrisch('Enter') || verbraucheTap())) {
+  if (spiel.phase === 'pfadEnde' && (verbraucheFrisch('Enter') || tap)) {
     gegnerIndex = 0;
     zumMenue();
     return;
   }
   // Touch: nach dem Match-Ende reicht ein Tipp irgendwo für die Revanche
-  if (spiel.phase === 'matchEnde' && !(spiel.storyModus && spiel.spielerHatGewonnen) && verbraucheTap()) {
+  if (spiel.phase === 'matchEnde' && !(spiel.storyModus && spiel.spielerHatGewonnen) && tap) {
     neuerKampf();
     return;
   }
@@ -169,8 +216,15 @@ function updateKampf(dt) {
   const { spieler, gegner } = spiel;
   const kampfAktiv = spiel.phase === 'kampf';
 
+  // Trainings-Dummy: je nach Modus still stehen, nur blocken oder normal kämpfen
+  let gegnerEingabe = leereEingabe();
+  if (kampfAktiv) {
+    if (!spiel.training || spiel.trainingModus === 2) gegnerEingabe = kiEingabe(gegner, spieler, dt);
+    else if (spiel.trainingModus === 1) gegnerEingabe.block = true;
+  }
+
   spieler.update(dt, kampfAktiv ? spielerEingabe() : leereEingabe(), gegner);
-  gegner.update(dt, kampfAktiv ? kiEingabe(gegner, spieler, dt) : leereEingabe(), spieler);
+  gegner.update(dt, gegnerEingabe, spieler);
 
   wendePhysikAn(spieler, dt);
   wendePhysikAn(gegner, dt);
@@ -186,13 +240,26 @@ function updateKampf(dt) {
   } else if (kampfAktiv) {
     const ereignisse = verarbeiteKampf(spieler, gegner);
     for (const e of ereignisse) {
-      spawnTrefferFunken(e.x, e.y, e.richtung, e.blockt, e.ko || e.spezial);
-      spiel.hitstop = e.ko ? G.hitstopKo : e.spezial ? 0.12 : e.blockt ? G.hitstopBlock : G.hitstopTreffer;
-      kamera.shake = Math.max(kamera.shake, e.ko ? G.shakeKo : e.spezial ? 12 : e.blockt ? G.shakeBlock : G.shakeTreffer);
+      spawnTrefferFunken(e.x, e.y, e.richtung, e.blockt, e.ko || e.spezial || e.wurf);
+      spiel.hitstop = e.ko ? G.hitstopKo : e.spezial || e.wurf ? 0.12 : e.blockt ? G.hitstopBlock : G.hitstopTreffer;
+      kamera.shake = Math.max(kamera.shake, e.ko ? G.shakeKo : e.spezial || e.wurf ? 12 : e.blockt ? G.shakeBlock : G.shakeTreffer);
       if (e.ko) spieleKo();
       else if (e.spezial) spieleSpezialTreffer();
       else if (e.blockt) spieleBlock();
       else spieleTreffer();
+    }
+
+    // Training: niemand geht K.O., beide regenerieren langsam
+    if (spiel.training) {
+      for (const k of [spieler, gegner]) {
+        k.hp = Math.min(k.maxHp, k.hp + CONFIG.training.regeneration * dt);
+        if (k.hp <= 0 || !k.lebt()) {
+          k.hp = k.maxHp;
+          k.anzeigeHp = k.maxHp;
+          k.wechsle('stehen');
+        }
+      }
+      return;
     }
 
     if (!spieler.lebt() || !gegner.lebt()) {

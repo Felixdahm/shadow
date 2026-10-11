@@ -38,6 +38,10 @@ export const CONFIG = {
     schlag:  { dauer: 0.38, aktivVon: 0.12, aktivBis: 0.24, schaden: 8,  reichweite: 78,  hoeheVomBoden: 140, rueckstoss: 170 },
     tritt:   { dauer: 0.52, aktivVon: 0.18, aktivBis: 0.32, schaden: 13, reichweite: 95,  hoeheVomBoden: 82,  rueckstoss: 260 },
     spezial: { dauer: 0.6,  aktivVon: 0.25, aktivBis: 0.42, schaden: 24, reichweite: 110, hoeheVomBoden: 120, rueckstoss: 430 },
+    // Flugkick: Höhe ist relativ zu den Füßen des Springenden — trifft also dort, wo er gerade fliegt
+    luftTritt: { dauer: 0.5, aktivVon: 0.08, aktivBis: 0.3, schaden: 10, reichweite: 88, hoeheVomBoden: 40, rueckstoss: 300 },
+    // Wurf: Konter gegen Dauerblocker — durchbricht den Block, braucht Nähe
+    wurf: { dauer: 0.55, aktivVon: 0.22, aktivBis: 0.34, schaden: 10, reichweite: 90, hoeheVomBoden: 110, rueckstoss: 540 },
   },
 
   // Spezialangriff "Schattenstoß": braucht eine volle Energie-Leiste,
@@ -77,6 +81,11 @@ export const CONFIG = {
   kombo: {
     maxKette: 3,        // höchstens 3 Angriffe hintereinander
     fensterNach: 0.05,  // so lange nach dem Treffer-Fenster darf verkettet werden
+    pufferDauer: 0.25,  // Angriffs-Eingaben bleiben so lange gültig (wichtig auf Touch)
+  },
+
+  training: {
+    regeneration: 14,   // HP pro Sekunde, die sich beide im Training zurückholen
   },
 
   // Spielgefühl: kurzes Einfrieren bei Treffern (Hitstop) und Kamerawackeln

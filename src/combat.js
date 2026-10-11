@@ -16,6 +16,8 @@ function pruefeTreffer(angreifer, ziel, ereignisse) {
   if (angreifer.hatGetroffen) return;
   if (angreifer.zustandZeit < A.aktivVon || angreifer.zustandZeit > A.aktivBis) return;
   if (!ziel.lebt()) return;
+  // Werfen kann man nur jemanden, der am Boden steht
+  if (angreifer.zustand === 'wurf' && !ziel.amBoden()) return;
 
   // Waffen zählen nur beim Arm-Angriff (Schlag); Größe skaliert die Reichweite mit
   const waffe = angreifer.zustand === 'schlag' ? angreifer.waffenDaten : null;
@@ -41,8 +43,9 @@ function pruefeTreffer(angreifer, ziel, ereignisse) {
   angreifer.hatGetroffen = true;
 
   const istSpezial = angreifer.zustand === 'spezial';
-  // Der Schattenstoß durchbricht jeden Block
-  const blockt = ziel.zustand === 'block' && !istSpezial;
+  const istWurf = angreifer.zustand === 'wurf';
+  // Schattenstoß und Wurf durchbrechen jeden Block
+  const blockt = ziel.zustand === 'block' && !istSpezial && !istWurf;
   const basisSchaden = Math.round((A.schaden + (waffe?.schadenBonus ?? 0)) * angreifer.charakter.schadenFaktor);
   const schaden = blockt ? Math.max(1, Math.round(basisSchaden * CONFIG.treffer.blockSchadenFaktor)) : basisSchaden;
   ziel.hp = Math.max(0, ziel.hp - schaden);
@@ -68,5 +71,6 @@ function pruefeTreffer(angreifer, ziel, ereignisse) {
     blockt,
     ko,
     spezial: istSpezial,
+    wurf: istWurf,
   });
 }
