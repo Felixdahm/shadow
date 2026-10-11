@@ -40,10 +40,20 @@ const blob = new Blob([readFileSync(resolve(projektOrdner, kontrolle))], { type:
 const kontrollUrl = await fal.storage.upload(blob);
 console.log('Kontrollbild hochgeladen.');
 
-const MODELL = 'fal-ai/flux-general';
-console.log(`Generiere mit ${MODELL} (${modus}-ControlNet, Stärke ${staerke}) …`);
+// Zwei Betriebsarten:
+//  --modus canny/pose/…  → ControlNet (Kanten/Gelenke steuern die Form)
+//  --modus i2i           → Image-to-Image (Referenzbild wird übermalt;
+//                           Stärke = wie viel verändert werden darf, 0–1)
+const istI2i = modus === 'i2i';
+const MODELL = istI2i ? 'fal-ai/flux/dev/image-to-image' : 'fal-ai/flux-general';
+console.log(`Generiere mit ${MODELL} (${modus}, Stärke ${staerke}) …`);
 const ergebnis = await fal.subscribe(MODELL, {
-  input: {
+  input: istI2i ? {
+    prompt,
+    image_url: kontrollUrl,
+    strength: staerke,
+    num_images: 1,
+  } : {
     prompt,
     image_size: 'square_hd',
     num_inference_steps: 28,
