@@ -205,7 +205,7 @@ export class Kaempfer {
     }
 
     // Nachbilder: schnelle Bewegungen ziehen eine Geister-Spur hinter sich her
-    const zieht = ['rolle', 'salto', 'sturm', 'spezial'].includes(this.zustand);
+    const zieht = ['rolle', 'salto', 'sturm', 'spezial', 'dreh'].includes(this.zustand);
     this.spurTimer -= dt;
     if (zieht && this.spurTimer <= 0 && this.letztePose) {
       this.spur.push({ x: this.x, y: this.y, blick: this.blick, pose: this.letztePose });
@@ -282,6 +282,7 @@ export class Kaempfer {
       this.aktionsPuffer = null;
       // Richtung + Angriff = eigene Attacke (wie in großen Kampfspielen)
       const vorwaerts = (eingabe.rechts && this.blick === 1) || (eingabe.links && this.blick === -1);
+      const rueckwaerts = (eingabe.links && this.blick === 1) || (eingabe.rechts && this.blick === -1);
       const W = CONFIG.angriffe.wurf;
       const wurfNah = Math.abs(gegner.x - this.x) < W.reichweite;
       if (wunsch === 'schlag') {
@@ -291,6 +292,8 @@ export class Kaempfer {
           this.wechsle('aufwaerts'); // ↓+Schlag: Uppercut, schleudert in die Luft
         } else if (vorwaerts) {
           this.wechsle('sturm'); // vorwärts+Schlag: Dash-Ramme
+        } else if (rueckwaerts) {
+          this.wechsle('dreh'); // zurück+Schlag: Drehschlag mit vollem Körperschwung
         } else {
           this.wechsle(this.basisSchlag()); // Waffen-Hieb bzw. Fauststoß
         }

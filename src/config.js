@@ -53,6 +53,9 @@ export const CONFIG = {
     aufwaerts: { dauer: 0.55, aktivVon: 0.18, aktivBis: 0.32, schaden: 10, reichweite: 95,  hoeheVomBoden: 120, rueckstoss: 100, knockup: 540, ausfall: 40 },
     sturm:     { dauer: 0.6,  aktivVon: 0.22, aktivBis: 0.4,  schaden: 11, reichweite: 130, hoeheVomBoden: 130, rueckstoss: 320, ausfall: 300 },
     fege:      { dauer: 0.6,  aktivVon: 0.2,  aktivBis: 0.36, schaden: 8,  reichweite: 125, hoeheVomBoden: 30,  rueckstoss: 180, niederschlag: true, ausfall: 60 },
+    // Drehschlag (zurück+Schlag): einwickeln und mit vollem Körperschwung
+    // herumpeitschen — langsam, aber hart und auf Kopfhöhe (Krit!)
+    dreh:      { dauer: 0.7,  aktivVon: 0.3,  aktivBis: 0.46, schaden: 14, reichweite: 135, hoeheVomBoden: 145, rueckstoss: 380, ausfall: 110 },
   },
 
   // Charakter-eigene Spezialangriffe (W bei voller Energie-Leiste)

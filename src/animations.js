@@ -62,6 +62,12 @@ const STURM_TREFFEN = p({ rumpf: 0.45, kopf: -0.1, vSchulter: 1.2, vEllbogen: 0.
 const FEGE_LADEN   = p({ hueftFaktor: 0.55, rumpf: 0.4, vHuefte: 1.0, vKnie: 1.9, hHuefte: 0.5, hKnie: 1.5 });
 const FEGE_TREFFEN = p({ hueftFaktor: 0.5, rumpf: 0.5, kopf: -0.2, vHuefte: 1.3, vKnie: 0.1, hHuefte: 0.6, hKnie: 1.6, vSchulter: 0.9, hSchulter: -0.3 });
 
+// Drehschlag: Körper wickelt sich vom Gegner WEG ein und peitscht dann mit
+// vollem Schwung herum — die große Rotation macht ihn kinoreif lesbar
+const DREH_EINWICKELN = p({ rumpf: -0.45, kopf: 0.5, vSchulter: -1.4, vEllbogen: 1.2, hSchulter: -0.6, hEllbogen: 1.8, vHuefte: 0.15, hHuefte: -0.5, hKnie: 0.6, hueftFaktor: 0.88 });
+const DREH_TREFFEN    = p({ rumpf: 0.5, kopf: -0.2, vSchulter: 1.75, vEllbogen: 0.05, hSchulter: 0.3, hEllbogen: 1.6, vHuefte: 0.7, hHuefte: -0.75, hKnie: 0.2, hueftFaktor: 0.85 });
+const DREH_DURCHZUG   = p({ rumpf: 0.55, kopf: -0.22, vSchulter: 2.0, vEllbogen: 0.15, vHuefte: 0.75, hHuefte: -0.8, hueftFaktor: 0.84 });
+
 // Zweiter Schlag der Kombo: die HINTERE Faust stößt vor (Haken) —
 // so wechseln die Arme sichtbar ab, statt denselben Schlag zu wiederholen.
 const SCHLAG2_AUSHOLEN = p({ hSchulter: -0.15, hEllbogen: 2.6, vSchulter: 0.7, vEllbogen: 2.0, rumpf: -0.08, hueftFaktor: 0.94 });
@@ -196,6 +202,14 @@ export const ANIMATIONEN = {
     { t: 0.17, pose: FEGE_TREFFEN, art: 'zack' },
     { t: 0.28, pose: FEGE_TREFFEN, art: 'weich' },
     { t: 0.46, pose: STAND, art: 'weich' },
+  ] },
+  dreh: { dauer: 0.7, loop: false, frames: [
+    { t: 0, pose: STAND },
+    { t: 0.24, pose: DREH_EINWICKELN, art: 'weich' },
+    { t: 0.34, pose: DREH_TREFFEN, art: 'zack' },
+    { t: 0.46, pose: DREH_DURCHZUG, art: 'weich' },
+    { t: 0.58, pose: SCHLAG_ZURUECK, art: 'weich' },
+    { t: 0.7, pose: STAND, art: 'weich' },
   ] },
   schlag2: { dauer: 0.38, loop: false, frames: [
     { t: 0, pose: STAND },
