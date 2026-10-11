@@ -39,8 +39,12 @@ export const CONFIG = {
     // Kombo-Haken mit der hinteren Faust (ohne Waffen-Bonus, etwas kürzer)
     schlag2: { dauer: 0.5,  aktivVon: 0.18, aktivBis: 0.32, schaden: 9,  reichweite: 95,  hoeheVomBoden: 140, rueckstoss: 190 },
     tritt:   { dauer: 0.68, aktivVon: 0.26, aktivBis: 0.44, schaden: 13, reichweite: 125, hoeheVomBoden: 82,  rueckstoss: 260 },
-    // Flugkick: Höhe ist relativ zu den Füßen des Springenden — trifft also dort, wo er gerade fliegt
-    luftTritt: { dauer: 0.55, aktivVon: 0.1, aktivBis: 0.36, schaden: 10, reichweite: 115, hoeheVomBoden: 40, rueckstoss: 300 },
+    // Luft-Angriffe: Höhe ist relativ zu den Füßen des Springenden — trifft also dort, wo er gerade fliegt
+    luftTritt:  { dauer: 0.55, aktivVon: 0.1,  aktivBis: 0.36, schaden: 10, reichweite: 115, hoeheVomBoden: 40,  rueckstoss: 300 },
+    // Luftschlag: schnell und kurz — perfekt, um nach dem Uppercut in der Luft nachzusetzen
+    luftSchlag: { dauer: 0.35, aktivVon: 0.06, aktivBis: 0.2,  schaden: 7,  reichweite: 95,  hoeheVomBoden: 110, rueckstoss: 220 },
+    // Sturztritt (↓+Angriff in der Luft): diagonal nach unten gerammt, streckt nieder
+    sturzTritt: { dauer: 0.9,  aktivVon: 0.05, aktivBis: 0.7,  schaden: 12, reichweite: 70,  hoeheVomBoden: 20,  rueckstoss: 300, niederschlag: true },
     // Wurf: Konter gegen Dauerblocker — durchbricht den Block, braucht Nähe
     wurf: { dauer: 0.65, aktivVon: 0.28, aktivBis: 0.42, schaden: 10, reichweite: 110, hoeheVomBoden: 110, rueckstoss: 540 },
 

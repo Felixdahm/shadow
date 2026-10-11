@@ -58,9 +58,14 @@ export class Kaempfer {
     return this.zustand !== 'ko';
   }
 
-  // Boden-Angriffe (der Flugkick hat einen eigenen Zweig, weil Schwerkraft wirkt)
+  // Luft-Angriffe haben eigene Zweige, weil die Schwerkraft weiterwirkt
+  istLuftAngriff() {
+    return ['luftTritt', 'luftSchlag', 'sturzTritt'].includes(this.zustand);
+  }
+
+  // Boden-Angriffe
   istAngriff() {
-    return this.zustand === 'spezial' || (this.zustand !== 'luftTritt' && CONFIG.angriffe[this.zustand] !== undefined);
+    return this.zustand === 'spezial' || (!this.istLuftAngriff() && CONFIG.angriffe[this.zustand] !== undefined);
   }
 
   // Werte des laufenden Angriffs — der Spezial hat pro Charakter eigene
@@ -215,18 +220,35 @@ export class Kaempfer {
       this.spur.shift();
     }
 
-    if (this.zustand === 'luftTritt') {
-      // Flugkick: Schwung aus dem Sprung bleibt, Schwerkraft wirkt weiter
+    if (this.zustand === 'luftTritt' || this.zustand === 'luftSchlag') {
+      // Schwung aus dem Sprung bleibt, Schwerkraft wirkt weiter
       if (this.amBoden() && this.vy >= 0) { spawnStaub(this.x, CONFIG.physik.bodenY); this.wechsle('stehen'); }
+      else if (this.zustand === 'luftSchlag' && this.zustandZeit >= CONFIG.angriffe.luftSchlag.dauer) this.wechsle('springen');
+      return;
+    }
+
+    if (this.zustand === 'sturzTritt') {
+      // Divekick: schießt diagonal nach unten, bis der Boden kommt
+      this.vx = this.blick * 260;
+      if (this.amBoden()) {
+        spawnStaub(this.x, CONFIG.physik.bodenY);
+        spawnStaub(this.x + this.blick * 25, CONFIG.physik.bodenY);
+        this.wechsle('stehen');
+      }
       return;
     }
 
     if (this.zustand === 'springen' || this.zustand === 'salto') {
-      // Angriff in der Luft → Flugkick
+      // Angriff in der Luft: A = Luftschlag (Juggle), S = Flugkick, ↓+A/S = Sturztritt
       const wunsch = this.aktionsPuffer?.aktion;
       if (wunsch === 'schlag' || wunsch === 'tritt') {
         this.aktionsPuffer = null;
-        this.wechsle('luftTritt');
+        if (eingabe.ducken) {
+          this.vy = Math.max(this.vy, 700); // sofort nach unten schießen
+          this.wechsle('sturzTritt');
+        } else {
+          this.wechsle(wunsch === 'schlag' ? 'luftSchlag' : 'luftTritt');
+        }
         return;
       }
       if (this.zustand === 'springen') {
@@ -378,7 +400,7 @@ export class Kaempfer {
     } else {
       const animName = this.zustand === 'spezial' ? `spezial_${this.spezialArt}` : this.zustand;
       let animZeit = this.zustandZeit;
-      const A = this.istAngriff() || this.zustand === 'luftTritt' ? this.angriffsDaten() ?? CONFIG.angriffe[this.zustand] : null;
+      const A = this.istAngriff() || this.istLuftAngriff() ? this.angriffsDaten() : null;
       if (A && ANIMATIONEN[animName]) animZeit = this.zustandZeit * (ANIMATIONEN[animName].dauer / A.dauer);
       pose = poseZumZeitpunkt(animName, animZeit);
     }
@@ -428,7 +450,7 @@ export class Kaempfer {
   // macht auf dem kleinen Handy-Bildschirm sofort lesbar, DASS und WO
   // gerade ein Angriff durchschwingt.
   zeichneSchwungSpur(ctx) {
-    const A = this.istAngriff() ? this.angriffsDaten() : null;
+    const A = this.istAngriff() || this.istLuftAngriff() ? this.angriffsDaten() : null;
     if (!A || this.zustand === 'wurf') return;
     const von = A.aktivVon - 0.05;
     const bis = A.aktivBis + 0.05;

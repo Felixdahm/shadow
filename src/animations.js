@@ -103,6 +103,19 @@ const LUFT_TRITT = p({
   hueftFaktor: 1,
 });
 
+// Luftschlag: kurzer Fausthieb im Flug, Beine angezogen
+const LUFT_SCHLAG = p({
+  vSchulter: 1.5, vEllbogen: 0.1, hSchulter: 0.4, hEllbogen: 1.6,
+  rumpf: 0.15, vHuefte: 0.9, vKnie: 1.3, hHuefte: 0.3, hKnie: 1.1, hueftFaktor: 1,
+});
+
+// Sturztritt: Bein diagonal nach unten gerammt, Arme hochgerissen
+const STURZ_TRITT = p({
+  vHuefte: 0.6, vKnie: 0.02, hHuefte: 1.3, hKnie: 1.8,
+  rumpf: 0.35, kopf: -0.1,
+  vSchulter: 2.2, vEllbogen: 0.3, hSchulter: 1.0, hEllbogen: 1.2, hueftFaktor: 1,
+});
+
 // Wurf: nach vorn greifen, dann den Gegner über die Schulter schleudern
 const WURF_GREIFEN = p({ vSchulter: 1.2, vEllbogen: 0.4, hSchulter: 1.0, hEllbogen: 0.5, rumpf: 0.35, hueftFaktor: 0.88, vHuefte: 0.5, hHuefte: -0.4 });
 const WURF_SCHLEUDERN = p({ vSchulter: -0.4, vEllbogen: 0.3, hSchulter: -0.6, hEllbogen: 0.4, rumpf: -0.25, kopf: -0.2, hueftFaktor: 0.92, vHuefte: 0.3, hHuefte: -0.5 });
@@ -235,6 +248,12 @@ export const ANIMATIONEN = {
   ] },
   luftTritt: { dauer: 0.5, loop: false, frames: [
     { t: 0, pose: BALL }, { t: 0.08, pose: LUFT_TRITT, art: 'zack' }, { t: 0.5, pose: LUFT_TRITT },
+  ] },
+  luftSchlag: { dauer: 0.35, loop: false, frames: [
+    { t: 0, pose: BALL }, { t: 0.06, pose: LUFT_SCHLAG, art: 'zack' }, { t: 0.22, pose: LUFT_SCHLAG }, { t: 0.35, pose: BALL, art: 'weich' },
+  ] },
+  sturzTritt: { dauer: 0.9, loop: false, frames: [
+    { t: 0, pose: BALL }, { t: 0.07, pose: STURZ_TRITT, art: 'zack' }, { t: 0.9, pose: STURZ_TRITT },
   ] },
   wurf: { dauer: 0.55, loop: false, frames: [
     { t: 0, pose: STAND }, { t: 0.18, pose: WURF_GREIFEN, art: 'weich' }, { t: 0.3, pose: WURF_SCHLEUDERN, art: 'zack' }, { t: 0.55, pose: STAND, art: 'weich' },
