@@ -32,11 +32,19 @@ export function kiEingabe(ich, gegner, dt) {
   const gegnerIstRechts = gegner.x > ich.x;
   const wuerfel = Math.random();
 
-  // Reaktion: Wenn der Gegner gerade angreift, je nach Stil blocken
-  const gegnerGreiftAn = gegner.zustand === 'schlag' || gegner.zustand === 'tritt';
-  if (gegnerGreiftAn && abstand < K.angriffsAbstand + 40 && wuerfel < stil.blockNeigung) {
-    e.block = true;
-    return e;
+  // Reaktion: Wenn der Gegner gerade angreift, blocken — oder wegrollen
+  const gegnerGreiftAn = gegner.zustand === 'schlag' || gegner.zustand === 'tritt' || gegner.zustand === 'spezial';
+  if (gegnerGreiftAn && abstand < K.angriffsAbstand + 40) {
+    if (wuerfel < stil.blockNeigung) {
+      e.block = true;
+      return e;
+    }
+    if (wuerfel < stil.blockNeigung + 0.18) {
+      // Rolle nach hinten, aus der Reichweite raus
+      e.ducken = true;
+      e[gegnerIstRechts ? 'links' : 'rechts'] = true;
+      return e;
+    }
   }
 
   // Volle Energie-Leiste → mit hoher Wahrscheinlichkeit den Schattenstoß zünden

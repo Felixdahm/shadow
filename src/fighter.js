@@ -27,6 +27,8 @@ export class Kaempfer {
     this.energie = 0;          // füllt sich durch Treffer; voll = Spezialangriff bereit
     this.kombo = 0;            // Position in der Angriffskette
     this.puffer = null;        // vorgemerkter Folgeangriff (Kombo)
+    this.rolleRichtung = 1;    // Bildschirm-Richtung der aktuellen Rolle
+    this.saltoRichtung = 1;    // Bildschirm-Richtung des aktuellen Saltos
     this.kiGedaechtnis = { timer: 0, eingabe: null };
     // Für weiche Übergänge: die zuletzt gezeichnete Pose wird beim
     // Zustandswechsel als Startpunkt der Überblendung gemerkt.
@@ -53,7 +55,7 @@ export class Kaempfer {
     this.hatGetroffen = false;
     this.uebergangVon = this.letztePose;
     this.uebergangZeit = 0;
-    if (zustand === 'schlag' || zustand === 'tritt') {
+    if (zustand === 'schlag' || zustand === 'tritt' || zustand === 'rolle' || zustand === 'salto') {
       spieleSchwung();
     } else if (zustand === 'spezial') {
       spieleSpezialStart();
@@ -144,6 +146,22 @@ export class Kaempfer {
       return;
     }
 
+    if (this.zustand === 'rolle') {
+      // Die Rolle trägt den Kämpfer tief über den Boden — Schläge gehen drüber weg
+      this.vx = this.rolleRichtung * CONFIG.bewegung.rollTempo;
+      if (this.zustandZeit >= CONFIG.bewegung.rollDauer) {
+        this.wechsle(eingabe.ducken && !(eingabe.links || eingabe.rechts) ? 'ducken' : 'stehen');
+      }
+      return;
+    }
+
+    if (this.zustand === 'salto') {
+      // Salto: wie ein Sprung, aber mit fester Flugrichtung und Körperdrehung
+      this.vx = this.saltoRichtung * this.tempo * 1.15;
+      if (this.amBoden() && this.vy >= 0) this.wechsle('stehen');
+      return;
+    }
+
     // Ab hier: steuerbare Boden-Zustände (stehen, laufen, ducken, block)
     this.blick = gegner.x >= this.x ? 1 : -1; // immer zum Gegner schauen
     this.vx = 0;
@@ -157,7 +175,17 @@ export class Kaempfer {
       this.wechsle('tritt');
     } else if (eingabe.springen) {
       this.vy = -CONFIG.kaempfer.sprungKraft;
-      this.wechsle('springen');
+      if (eingabe.links || eingabe.rechts) {
+        // Schräg nach oben → Salto in diese Richtung (vorwärts oder rückwärts)
+        this.saltoRichtung = eingabe.rechts ? 1 : -1;
+        this.wechsle('salto');
+      } else {
+        this.wechsle('springen');
+      }
+    } else if (eingabe.ducken && (eingabe.links || eingabe.rechts)) {
+      // Schräg nach unten → Rolle in diese Richtung
+      this.rolleRichtung = eingabe.rechts ? 1 : -1;
+      this.wechsle('rolle');
     } else if (eingabe.block) {
       if (this.zustand !== 'block') this.wechsle('block');
     } else if (eingabe.ducken) {
@@ -191,11 +219,28 @@ export class Kaempfer {
 
     // Hit-Flash: direkt nach einem Treffer färbt sich die Silhouette kurz dunkelrot
     const flash = this.zustand === 'treffer' && this.zustandZeit < 0.12 ? '#6b1626' : null;
+
+    // Rolle und Salto drehen den ganzen Körper um seinen Mittelpunkt
+    const dreht = this.zustand === 'rolle' || this.zustand === 'salto';
+    if (dreht) {
+      const B = CONFIG.bewegung;
+      const richtung = this.zustand === 'rolle' ? this.rolleRichtung : this.saltoRichtung;
+      const dauer = this.zustand === 'rolle' ? B.rollDauer : B.saltoDauer;
+      const winkel = Math.PI * 2 * Math.min(1, this.zustandZeit / dauer) * richtung;
+      const pivotY = this.y - (this.zustand === 'rolle' ? 48 : 80) * this.skalierung;
+      ctx.save();
+      ctx.translate(this.x, pivotY);
+      ctx.rotate(winkel);
+      ctx.translate(-this.x, -pivotY);
+    }
+
     zeichneSkelett(ctx, this.x, this.y, this.blick, pose, {
       einfaerbung: flash,
       skalierung: this.skalierung,
       waffe: this.charakter.waffe,
       extras: this.charakter.extras,
     });
+
+    if (dreht) ctx.restore();
   }
 }

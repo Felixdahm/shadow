@@ -28,7 +28,9 @@ function pruefeTreffer(angreifer, ziel, ereignisse) {
 
   // Hurtbox des Ziels: Rechteck um den Körper, geduckt deutlich niedriger
   const K = CONFIG.kaempfer;
-  const hoehe = (ziel.zustand === 'ducken' ? K.koerperHoehe * K.duckHoehenFaktor : K.koerperHoehe) * ziel.skalierung;
+  // Geduckt und während der Rolle ist die Hurtbox niedrig — Schläge gehen drüber weg
+  const istTief = ziel.zustand === 'ducken' || ziel.zustand === 'rolle';
+  const hoehe = (istTief ? K.koerperHoehe * K.duckHoehenFaktor : K.koerperHoehe) * ziel.skalierung;
   const zielLinks = ziel.x - K.koerperBreite / 2;
   const zielRechts = ziel.x + K.koerperBreite / 2;
 

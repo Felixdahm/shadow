@@ -56,6 +56,14 @@ export const CONFIG = {
     blockRueckstossFaktor: 0.4,
   },
 
+  // Ausweichbewegungen: Rolle am Boden (duckt unter Schlägen durch),
+  // Salto = Sprung mit ganzer Körperdrehung bei Schräg-Steuerung
+  bewegung: {
+    rollTempo: 380,
+    rollDauer: 0.45,
+    saltoDauer: 0.72, // Zeit für die volle 360°-Drehung (≈ Flugzeit)
+  },
+
   animation: {
     uebergangsDauer: 0.1, // Posen blenden bei Zustandswechseln weich ineinander über
   },

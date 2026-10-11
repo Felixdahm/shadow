@@ -51,6 +51,15 @@ const SPEZIAL_SAMMELN  = p({ vSchulter: -0.35, vEllbogen: 2.7, hSchulter: -0.25,
 const SPEZIAL_STOSS    = p({ vSchulter: 1.65, vEllbogen: 0.02, hSchulter: -0.5, hEllbogen: 0.6, rumpf: 0.5, kopf: -0.15, hueftFaktor: 0.78, vHuefte: 1.0, vKnie: 0.5, hHuefte: -0.9, hKnie: 0.1 });
 const SPEZIAL_DURCHZUG = p({ vSchulter: 1.8, vEllbogen: 0.15, hSchulter: -0.55, hEllbogen: 0.6, rumpf: 0.55, kopf: -0.15, hueftFaktor: 0.76, vHuefte: 1.05, vKnie: 0.55, hHuefte: -0.95, hKnie: 0.12 });
 
+// Enge Kugel für Rolle und Salto — die eigentliche Drehung macht fighter.js
+// über eine Canvas-Rotation um den Körpermittelpunkt.
+const BALL = p({
+  rumpf: 0.9, kopf: 0.5,
+  vSchulter: 1.3, vEllbogen: 2.4, hSchulter: 1.1, hEllbogen: 2.3,
+  vHuefte: 1.5, vKnie: 2.4, hHuefte: 1.2, hKnie: 2.2,
+  hueftFaktor: 0.55,
+});
+
 // Treffer-Reaktion mit leichtem Zurückfedern
 const TREFFER_POSE = p({ rumpf: -0.42, kopf: -0.35, vSchulter: 0.95, vEllbogen: 0.7, hSchulter: 0.5, hEllbogen: 0.4, vHuefte: 0.5, vKnie: 0.3, hHuefte: -0.4, hKnie: 0.5, hueftFaktor: 0.9 });
 const TREFFER_FEDERN = p({ rumpf: -0.15, kopf: -0.12, vSchulter: 0.8, vEllbogen: 1.2, hSchulter: 0.45, hEllbogen: 1.0, hueftFaktor: 0.93 });
@@ -112,6 +121,12 @@ export const ANIMATIONEN = {
     { t: 0.27, pose: TRITT_DURCHZUG, art: 'weich' },
     { t: 0.38, pose: TRITT_ZURUECK, art: 'weich' },
     { t: 0.52, pose: STAND, art: 'weich' },
+  ] },
+  rolle: { dauer: 0.45, loop: false, frames: [
+    { t: 0, pose: STAND }, { t: 0.08, pose: BALL, art: 'zack' }, { t: 0.37, pose: BALL }, { t: 0.45, pose: STAND, art: 'weich' },
+  ] },
+  salto: { dauer: 0.72, loop: false, frames: [
+    { t: 0, pose: STAND }, { t: 0.1, pose: BALL, art: 'zack' }, { t: 0.55, pose: BALL }, { t: 0.72, pose: STAND, art: 'weich' },
   ] },
   spezial: { dauer: 0.6, loop: false, frames: [
     { t: 0, pose: STAND },

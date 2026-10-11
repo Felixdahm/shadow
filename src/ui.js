@@ -1,7 +1,7 @@
 import { CONFIG } from './config.js';
 import { zeichneSkelett } from './skeleton.js';
 import { poseZumZeitpunkt } from './animations.js';
-import { TOUCH_BUTTONS, istGedrueckt } from './input.js';
+import { TOUCH_BUTTONS, istGedrueckt, stickZustand } from './input.js';
 
 const BALKEN_BREITE = 340;
 const BALKEN_HOEHE = 20;
@@ -108,9 +108,34 @@ export function zeichneUI(ctx, spiel) {
   ctx.textAlign = 'left';
 }
 
-// Bildschirm-Buttons für Touch-Geräte; der Spezial-Button leuchtet bei voller Energie
+// Bildschirm-Steuerung für Touch-Geräte: virtueller Joystick links,
+// Aktions-Buttons rechts; der Spezial-Button leuchtet bei voller Energie
 export function zeichneTouchSteuerung(ctx, spieler) {
   ctx.textAlign = 'center';
+
+  const stick = stickZustand();
+  if (stick) {
+    // Äußerer Ring am Aufsetzpunkt, Knubbel folgt dem Finger
+    ctx.strokeStyle = 'rgba(243, 233, 247, 0.45)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(stick.x, stick.y, 60, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255, 235, 200, 0.5)';
+    ctx.beginPath();
+    ctx.arc(stick.x + stick.dx, stick.y + stick.dy, 26, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    // Dezenter Hinweis, wo der Joystick lebt
+    ctx.strokeStyle = 'rgba(243, 233, 247, 0.18)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(150, 445, 55, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(243, 233, 247, 0.35)';
+    ctx.font = 'bold 12px system-ui, sans-serif';
+    ctx.fillText('BEWEGEN', 150, 449);
+  }
   for (const b of TOUCH_BUTTONS) {
     const gehalten = istGedrueckt(b.code);
     const istSpezial = b.code === 'KeyW';
