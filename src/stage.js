@@ -163,3 +163,30 @@ export function zeichneVordergrund(ctx, kameraX, arenaName = 'aschenpass') {
   const arena = ARENEN[arenaName] ?? ARENEN.aschenpass;
   ebene(ctx, kameraX, 1.25, () => silhouette(ctx, FELSEN_VORN, arena.vordergrund));
 }
+
+// Atmosphären-Partikel pro Arena: Funken, Glühwürmchen, Asche, Nebel, Schatten-Motten.
+// Bewusst ZUSTANDSLOS: jede Position wird aus Index und Uhrzeit berechnet —
+// kein Update nötig, läuft einfach immer.
+const AMBIENTE = {
+  aschenpass:    { farbe: 'rgba(235, 190, 150,', anzahl: 20, tempo: 13, steigt: false, groesse: 2.2 }, // sinkende Asche
+  mondhain:      { farbe: 'rgba(190, 235, 180,', anzahl: 14, tempo: 6,  steigt: true,  groesse: 2.6 }, // Glühwürmchen
+  glutschmiede:  { farbe: 'rgba(255, 150, 70,',  anzahl: 28, tempo: 28, steigt: true,  groesse: 2.4 }, // Funken
+  nebelschlucht: { farbe: 'rgba(205, 225, 215,', anzahl: 9,  tempo: 7,  steigt: true,  groesse: 16 },  // Nebelschwaden
+  leere:         { farbe: 'rgba(150, 110, 220,', anzahl: 18, tempo: 10, steigt: true,  groesse: 2.2 }, // Schatten-Motten
+};
+
+export function zeichneAmbiente(ctx, arenaName, kameraX) {
+  const a = AMBIENTE[arenaName] ?? AMBIENTE.aschenpass;
+  const t = performance.now() / 1000;
+  for (let i = 0; i < a.anzahl; i++) {
+    const basisX = ((i * 379) % 1260) - 150;
+    const x = basisX + Math.sin(t * 0.4 + i * 1.7) * 30 - kameraX * 0.6;
+    const lauf = (i * 97 + t * a.tempo) % 580;
+    const y = a.steigt ? 560 - lauf : lauf - 20;
+    const alpha = (0.22 + 0.18 * Math.sin(t + i)) * (a.groesse > 5 ? 0.3 : 1);
+    ctx.fillStyle = `${a.farbe}${Math.max(0.05, alpha).toFixed(2)})`;
+    ctx.beginPath();
+    ctx.arc(x, y, a.groesse + (i % 3), 0, Math.PI * 2);
+    ctx.fill();
+  }
+}

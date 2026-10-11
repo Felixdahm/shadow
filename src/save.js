@@ -6,7 +6,9 @@ const SCHLUESSEL = 'schattenpfad-spielstand';
 const STANDARD = {
   version: 1,
   splitter: 0,              // Währung: Schatten-Splitter ◆
-  fortschritt: 0,           // höchste erreichte Story-Station (Index in GEGNER_PFAD)
+  welt: 1,                  // aktuelle Welt; jede Welt = der Pfad mit stärkeren Gegnern
+  turnierFortschritt: 0,    // wie viele Turnier-Gegner in dieser Welt besiegt sind (0–5)
+  fortschritt: 0,           // (alt, wird nicht mehr genutzt)
   waffe: 'schwert',         // ausgerüstete Waffe
   extra: 'stirnband',       // ausgerüsteter Silhouetten-Stil
   gekauft: ['schwert', 'stirnband'],

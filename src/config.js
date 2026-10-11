@@ -99,13 +99,18 @@ export const CONFIG = {
     schwer: { name: 'Schwer', schaden: 1.25, hp: 1.15, denken: 0.75 },
   },
 
-  // Schatten-Splitter ◆ als Belohnung nach einem Match
+  // Schatten-Splitter ◆ als Belohnung nach einem Match.
+  // Turnier: je weiter auf der Karte, desto mehr — und jede Welt multipliziert.
   belohnungen: {
-    storySieg: 25,
-    bossSieg: 60,
+    turnierBasis: 20,
+    turnierProStufe: 12,
+    bossBonus: 60,
     freierSieg: 15,
     niederlage: 5,
   },
+
+  // Jede Welt macht die Gegner stärker und die Belohnungen größer
+  weltSteigerung: 0.3,
 
   // Endboss-Mechanik "Schattenschritt": kurz unsichtbar, dann hinter dem Gegner
   boss: {

@@ -6,8 +6,12 @@ import { ladeSpielstand, speichereSpielstand } from './save.js';
 import { kiEingabe, leereEingabe } from './ai.js';
 import { wendePhysikAn, trenneKaempfer } from './physics.js';
 import { verarbeiteKampf } from './combat.js';
-import { zeichneStage, zeichneVordergrund } from './stage.js';
-import { zeichneUI, zeichneMenue, zeichneStory, zeichneGegnerWahl, zeichneTouchSteuerung, zeichneAusruestung, MENUE_KNOPF } from './ui.js';
+import { zeichneStage, zeichneVordergrund, zeichneAmbiente } from './stage.js';
+import {
+  zeichneUI, zeichneStory, zeichneAusruestung, zeichneTouchSteuerung,
+  zeichnePanel, zeichneWeltKarte, zeichneVignette,
+  MENUE_KNOPF, ZURUECK_KNOPF, PANEL_EINTRAG,
+} from './ui.js';
 import { spawnTrefferFunken, updatePartikel, zeichnePartikel, leerePartikel } from './particles.js';
 import { spieleTreffer, spieleBlock, spieleKo, spieleGong, spieleSpezialTreffer, setzeEffekte } from './sound.js';
 import { setzeMusik, setzeMusikAn } from './music.js';
@@ -18,19 +22,21 @@ const ctx = canvas.getContext('2d');
 const START_X_SPIELER = 320;
 const START_X_GEGNER = 640;
 
-// Oberster Spielzustand: Menü → (Story-Text) → Kampf → zurück
-let modus = 'menue'; // 'menue' | 'gegnerWahl' | 'story' | 'kampf' | 'ausruestung'
-let menueIndex = 0;  // gewählter Menüeintrag
-let wahlIndex = 0;   // gewählter Gegner im freien Kampf
-let menueZeit = 0;   // für Atem-Animationen im Menü
-let gegnerIndex = 0; // Position auf dem Schattenpfad
-let storyModus = true;
+// Spielablauf wie in Shadow Fight: Man startet im DOJO (Trainingskampf) und
+// öffnet von dort das Panel → Karte (Turnier/Boss), Ausrüstung, Einstellungen.
+// modus: 'kampf' (Dojo oder echter Kampf) | 'karte' | 'story' | 'ausruestung'
+let modus = 'kampf';
+let panelOffen = false; // Seitenpanel im Dojo
+let panelIndex = 0;
+let menueZeit = 0;
+let gegnerIndex = 0;    // welcher Karten-Knoten gerade bekämpft wird (0–4)
+let kampfTurnier = false;
 let spiel = null;
 
-// Dauerhafter Fortschritt (localStorage): Splitter, Käufe, Story-Station, Schwierigkeit
 const spielstand = ladeSpielstand();
 const SCHWIERIGKEITEN = ['leicht', 'normal', 'schwer'];
 const TON_MODI = ['alles', 'effekte', 'aus'];
+let karteIndex = Math.min(spielstand.turnierFortschritt, GEGNER_PFAD.length - 1);
 
 function wendeTonEinstellungAn() {
   setzeEffekte(spielstand.ton !== 'aus');
@@ -47,84 +53,95 @@ let ausruestungZeile = 0;
 let waffenIndex = Math.max(0, WAFFEN_LADEN.findIndex((w) => w.id === spielstand.waffe));
 let stilIndex = Math.max(0, STIL_LADEN.findIndex((s) => s.id === spielstand.extra));
 
+const kamera = { x: 0, shake: 0, zoom: 1 };
+
+// Jede Welt macht Gegner und Belohnungen größer
+function weltFaktor() {
+  return 1 + CONFIG.weltSteigerung * (spielstand.welt - 1);
+}
+
 // Juro mit der aktuell ausgerüsteten Waffe und dem gewählten Stil
 function spielerCharakter() {
   return { ...CHARAKTERE.juro, waffe: spielstand.waffe, extras: [spielstand.extra] };
 }
 
-// Gegner mit angewendetem Schwierigkeitsgrad
+// Gegner mit Schwierigkeitsgrad UND Welt-Steigerung
 function gegnerCharakter(id) {
   const basis = CHARAKTERE[id];
   const s = CONFIG.schwierigkeiten[spielstand.schwierigkeit];
+  const w = weltFaktor();
   return {
     ...basis,
-    schadenFaktor: basis.schadenFaktor * s.schaden,
-    hpFaktor: basis.hpFaktor * s.hp,
+    schadenFaktor: basis.schadenFaktor * s.schaden * w,
+    hpFaktor: basis.hpFaktor * s.hp * w,
     denkFaktor: s.denken,
   };
 }
 
-const kamera = { x: 0, shake: 0, zoom: 1 };
+// Belohnung für einen Karten-Knoten (Turnier steigt mit der Stufe, Welt multipliziert)
+function turnierBelohnung(index) {
+  const B = CONFIG.belohnungen;
+  const istBoss = index === GEGNER_PFAD.length - 1;
+  return Math.round((B.turnierBasis + B.turnierProStufe * index + (istBoss ? B.bossBonus : 0)) * weltFaktor());
+}
 
-function neuerKampf() {
-  const gegnerDaten = gegnerCharakter(GEGNER_PFAD[gegnerIndex]);
-  const naechsterName = GEGNER_PFAD[gegnerIndex + 1] ? CHARAKTERE[GEGNER_PFAD[gegnerIndex + 1]].name : null;
-  spiel = {
+function kampfGeruest(gegnerDaten, gegnerId) {
+  return {
     spieler: new Kaempfer(spielerCharakter(), START_X_SPIELER, 1),
     gegner: new Kaempfer(gegnerDaten, START_X_GEGNER, -1),
     runde: 1,
-    phase: 'intro', // intro → kampf → rundenEnde → (intro | matchEnde) → (weiter | pfadEnde)
+    phase: 'intro',
     phasenZeit: 0,
     hitstop: 0,
     rundenSieger: null,
     matchSieger: null,
     spielerHatGewonnen: false,
+    belohnung: 0,
     kampfNummer: gegnerIndex + 1,
     kampfAnzahl: GEGNER_PFAD.length,
-    naechsterGegner: naechsterName,
+    weltNummer: spielstand.welt,
     arena: gegnerDaten.arena ?? 'aschenpass',
-    gegnerId: GEGNER_PFAD[gegnerIndex],
-    storyModus,
+    gegnerId,
+    turnier: kampfTurnier,
+    istBoss: !!gegnerDaten.boss,
+    istDojo: false,
     training: false,
     trainingModus: 0,
   };
-  kamera.x = 0;
-  kamera.shake = 0;
-  leerePartikel();
-  modus = 'kampf';
 }
 
-// Trainings-Modus: Dummy-Gegner, kein K.O., HP regenerieren sich
-function neuesTraining() {
-  storyModus = false;
+// Das Dojo: Trainingskampf als Heimat-Bildschirm
+function zumDojo() {
+  kampfTurnier = false;
+  const id = 'scharr';
   spiel = {
-    spieler: new Kaempfer(spielerCharakter(), START_X_SPIELER, 1),
-    gegner: new Kaempfer(CHARAKTERE.scharr, START_X_GEGNER, -1),
-    runde: 1,
-    phase: 'kampf', // kein Intro — direkt loslegen
-    phasenZeit: 0,
-    hitstop: 0,
-    rundenSieger: null,
-    matchSieger: null,
-    spielerHatGewonnen: false,
-    kampfNummer: 1,
-    kampfAnzahl: 1,
-    naechsterGegner: null,
-    arena: 'aschenpass',
-    gegnerId: 'scharr',
-    storyModus: false,
+    ...kampfGeruest(CHARAKTERE[id], id),
+    phase: 'kampf', // kein Intro
+    istDojo: true,
     training: true,
-    trainingModus: 0, // 0 = steht, 1 = blockt, 2 = kämpft
   };
   kamera.x = 0;
   kamera.shake = 0;
   leerePartikel();
   modus = 'kampf';
+  panelOffen = false;
 }
 
-function zumMenue() {
-  modus = 'menue';
+function starteKampf(index, turnier) {
+  gegnerIndex = index;
+  kampfTurnier = turnier;
+  const id = GEGNER_PFAD[index];
+  spiel = kampfGeruest(gegnerCharakter(id), id);
+  kamera.x = 0;
+  kamera.shake = 0;
+  leerePartikel();
+  modus = 'kampf';
+}
+
+function zurKarte() {
+  modus = 'karte';
   spiel = null;
+  karteIndex = Math.min(spielstand.turnierFortschritt, GEGNER_PFAD.length - 1);
 }
 
 function naechsteRunde() {
@@ -149,54 +166,103 @@ function spielerEingabe() {
   };
 }
 
-// ---------- Menü- und Story-Logik ----------
+// ---------- Panel (Dojo-Seitenmenü) ----------
 
-function menueEintraege() {
+function panelEintraege() {
   const s = CONFIG.schwierigkeiten[spielstand.schwierigkeit];
   const ton = { alles: 'Musik + Effekte', effekte: 'Nur Effekte', aus: 'Aus' }[spielstand.ton];
-  return ['Story-Modus', 'Freier Kampf', 'Training', 'Ausrüstung', `Schwierigkeit: ${s.name}`, `Ton: ${ton}`];
+  return ['⚔ Spielkarte', '🛡 Ausrüstung', `Schwierigkeit: ${s.name}`, `Ton: ${ton}`, 'Weiter trainieren'];
 }
 
-function updateMenue() {
-  const anzahl = menueEintraege().length;
-  if (verbraucheFrisch('ArrowUp')) menueIndex = (menueIndex + anzahl - 1) % anzahl;
-  if (verbraucheFrisch('ArrowDown')) menueIndex = (menueIndex + 1) % anzahl;
-  // Touch: Tipp auf einen Menüeintrag wählt und bestätigt ihn
+function updatePanel() {
+  const anzahl = panelEintraege().length;
+  if (verbraucheFrisch('ArrowUp')) panelIndex = (panelIndex + anzahl - 1) % anzahl;
+  if (verbraucheFrisch('ArrowDown')) panelIndex = (panelIndex + 1) % anzahl;
+  if (verbraucheFrisch('Escape')) { panelOffen = false; return; }
+
   const tap = verbraucheTap();
   let bestaetigt = verbraucheFrisch('Enter');
   if (tap) {
-    // Einträge stehen bei y = 240 + i·44 (je ±22 Tipp-Toleranz)
+    if (tap.x > 340) { panelOffen = false; return; } // neben das Panel getippt
     for (let i = 0; i < anzahl; i++) {
-      const mitte = 240 + i * 44;
-      if (tap.y > mitte - 22 && tap.y <= mitte + 22) { menueIndex = i; bestaetigt = true; }
+      const r = PANEL_EINTRAG(i);
+      if (tap.x >= r.x && tap.x <= r.x + r.b && tap.y >= r.y && tap.y <= r.y + r.h) {
+        panelIndex = i;
+        bestaetigt = true;
+      }
     }
   }
-  if (bestaetigt) {
-    if (menueIndex === 0) {
-      storyModus = true;
-      // Story setzt an der höchsten erreichten Station fort
-      gegnerIndex = Math.min(spielstand.fortschritt, GEGNER_PFAD.length - 1);
-      modus = 'story';
-    } else if (menueIndex === 1) {
-      modus = 'gegnerWahl';
-    } else if (menueIndex === 2) {
-      neuesTraining();
-    } else if (menueIndex === 3) {
-      modus = 'ausruestung';
-    } else if (menueIndex === 4) {
-      // Schwierigkeitsgrad durchschalten und merken
-      const i = SCHWIERIGKEITEN.indexOf(spielstand.schwierigkeit);
-      spielstand.schwierigkeit = SCHWIERIGKEITEN[(i + 1) % SCHWIERIGKEITEN.length];
-      speichereSpielstand(spielstand);
-    } else {
-      // Ton-Einstellung durchschalten
-      const i = TON_MODI.indexOf(spielstand.ton);
-      spielstand.ton = TON_MODI[(i + 1) % TON_MODI.length];
-      wendeTonEinstellungAn();
-      speichereSpielstand(spielstand);
-    }
+  if (!bestaetigt) return;
+
+  if (panelIndex === 0) { zurKarte(); panelOffen = false; }
+  else if (panelIndex === 1) { modus = 'ausruestung'; panelOffen = false; }
+  else if (panelIndex === 2) {
+    const i = SCHWIERIGKEITEN.indexOf(spielstand.schwierigkeit);
+    spielstand.schwierigkeit = SCHWIERIGKEITEN[(i + 1) % SCHWIERIGKEITEN.length];
+    speichereSpielstand(spielstand);
+  } else if (panelIndex === 3) {
+    const i = TON_MODI.indexOf(spielstand.ton);
+    spielstand.ton = TON_MODI[(i + 1) % TON_MODI.length];
+    wendeTonEinstellungAn();
+    speichereSpielstand(spielstand);
+  } else {
+    panelOffen = false;
   }
 }
+
+// ---------- Karte ----------
+
+function kartenEintraege() {
+  return GEGNER_PFAD.map((id, i) => ({
+    id,
+    name: CHARAKTERE[id].name,
+    beschreibung: CHARAKTERE[id].beschreibung,
+    status: i < spielstand.turnierFortschritt ? 'besiegt' : i === spielstand.turnierFortschritt ? 'offen' : 'gesperrt',
+    belohnung: i < spielstand.turnierFortschritt ? Math.round(CONFIG.belohnungen.freierSieg * weltFaktor()) : turnierBelohnung(i),
+  }));
+}
+
+function updateKarte() {
+  const n = GEGNER_PFAD.length;
+  if (verbraucheFrisch('ArrowLeft')) karteIndex = (karteIndex + n - 1) % n;
+  if (verbraucheFrisch('ArrowRight')) karteIndex = (karteIndex + 1) % n;
+  if (verbraucheFrisch('Escape')) { zumDojo(); return; }
+
+  const tap = verbraucheTap();
+  let bestaetigt = verbraucheFrisch('Enter');
+  if (tap) {
+    const Z = ZURUECK_KNOPF;
+    if (tap.x >= Z.x && tap.x <= Z.x + Z.b && tap.y >= Z.y && tap.y <= Z.y + Z.h) { zumDojo(); return; }
+    // Tipp auf einen Knoten: erst wählen, gleicher Knoten nochmal = starten
+    const abstand = 165;
+    const startX = CONFIG.canvas.breite / 2 - ((n - 1) * abstand) / 2;
+    for (let i = 0; i < n; i++) {
+      const px = startX + i * abstand;
+      if (Math.abs(tap.x - px) < 70 && tap.y > 120 && tap.y < 300) {
+        if (karteIndex === i) bestaetigt = true;
+        karteIndex = i;
+      }
+    }
+  }
+  if (!bestaetigt) return;
+
+  const eintrag = kartenEintraege()[karteIndex];
+  if (eintrag.status === 'gesperrt') return;
+  if (eintrag.status === 'offen') {
+    // Neuer Turnierkampf: erst die Geschichte, dann der Kampf
+    gegnerIndex = karteIndex;
+    modus = 'story';
+  } else {
+    starteKampf(karteIndex, false); // Revanche (freier Kampf)
+  }
+}
+
+function updateStory() {
+  if (verbraucheFrisch('Enter') || verbraucheTap()) starteKampf(gegnerIndex, true);
+  if (verbraucheFrisch('Escape')) zurKarte();
+}
+
+// ---------- Ausrüstung ----------
 
 function updateAusruestung() {
   const tap = verbraucheTap();
@@ -205,13 +271,12 @@ function updateAusruestung() {
   let rechts = verbraucheFrisch('ArrowRight');
 
   if (verbraucheFrisch('ArrowUp') || verbraucheFrisch('ArrowDown')) ausruestungZeile = 1 - ausruestungZeile;
-  if (verbraucheFrisch('Escape')) { zumMenue(); return; }
+  if (verbraucheFrisch('Escape')) { zumDojo(); panelOffen = true; return; }
 
   if (tap) {
-    // Tipp auf eine Zeile wählt sie; links/rechts davon blättert, Mitte bestätigt
     if (tap.y > 140 && tap.y < 280) ausruestungZeile = 0;
     else if (tap.y >= 280 && tap.y < 430) ausruestungZeile = 1;
-    else { zumMenue(); return; } // Tipp ganz unten/oben = zurück
+    else { zumDojo(); panelOffen = true; return; }
     if (tap.x < 220) links = true;
     else if (tap.x > 440 && tap.x < 580) bestaetigt = true;
   }
@@ -230,7 +295,6 @@ function updateAusruestung() {
       spielstand.gekauft.push(eintrag.id);
     }
     if (spielstand.gekauft.includes(eintrag.id)) {
-      // Gekauftes wird direkt ausgerüstet
       if (ausruestungZeile === 0) spielstand.waffe = eintrag.id;
       else spielstand.extra = eintrag.id;
     }
@@ -238,45 +302,27 @@ function updateAusruestung() {
   }
 }
 
-function updateGegnerWahl() {
-  // Touch: links/rechts tippen blättert, Mitte startet den Kampf
-  const tap = verbraucheTap();
-  let links = verbraucheFrisch('ArrowLeft');
-  let rechts = verbraucheFrisch('ArrowRight');
-  let start = verbraucheFrisch('Enter');
-  if (tap) {
-    if (tap.x < 320) links = true;
-    else if (tap.x > 640) rechts = true;
-    else start = true;
-  }
-  if (links) wahlIndex = (wahlIndex + GEGNER_PFAD.length - 1) % GEGNER_PFAD.length;
-  if (rechts) wahlIndex = (wahlIndex + 1) % GEGNER_PFAD.length;
-  if (start) {
-    storyModus = false;
-    gegnerIndex = wahlIndex;
-    neuerKampf();
-  }
-  if (verbraucheFrisch('Escape')) zumMenue();
-}
-
-function updateStory() {
-  if (verbraucheFrisch('Enter') || verbraucheTap()) neuerKampf();
-  if (verbraucheFrisch('Escape')) zumMenue();
-}
-
-// ---------- Kampf-Logik ----------
+// ---------- Kampf ----------
 
 function updateKampf(dt) {
+  // Im Dojo: Panel offen = Spiel pausiert, nur Panel bedienen
+  if (spiel.istDojo && panelOffen) {
+    updatePanel();
+    return;
+  }
+
   const tap = verbraucheTap();
 
   if (verbraucheFrisch('Escape')) {
-    zumMenue();
+    if (spiel.istDojo) panelOffen = true;
+    else zurKarte();
     return;
   }
-  // Touch: MENÜ-Knopf oben in der Mitte verlässt den Kampf
+  // Knopf oben Mitte: Dojo → Panel, Kampf → Karte
   if (tap && tap.x > MENUE_KNOPF.x && tap.x < MENUE_KNOPF.x + MENUE_KNOPF.b
       && tap.y > MENUE_KNOPF.y && tap.y < MENUE_KNOPF.y + MENUE_KNOPF.h) {
-    zumMenue();
+    if (spiel.istDojo) panelOffen = true;
+    else zurKarte();
     return;
   }
   // Training: T oder Tipp oben wechselt das Dummy-Verhalten
@@ -284,17 +330,20 @@ function updateKampf(dt) {
     spiel.trainingModus = (spiel.trainingModus + 1) % 3;
   }
   if (verbraucheFrisch('KeyR') && !spiel.training) {
-    if (spiel.phase === 'pfadEnde') { gegnerIndex = 0; zumMenue(); } else neuerKampf();
+    starteKampf(gegnerIndex, kampfTurnier); // Revanche
     return;
   }
   if (spiel.phase === 'pfadEnde' && (verbraucheFrisch('Enter') || tap)) {
-    gegnerIndex = 0;
-    zumMenue();
+    // Welt abgeschlossen → nächste Welt beginnt
+    spielstand.welt++;
+    spielstand.turnierFortschritt = 0;
+    speichereSpielstand(spielstand);
+    zurKarte();
     return;
   }
-  // Touch: nach dem Match-Ende reicht ein Tipp irgendwo für die Revanche
-  if (spiel.phase === 'matchEnde' && !(spiel.storyModus && spiel.spielerHatGewonnen) && tap) {
-    neuerKampf();
+  // Nach dem Match-Ende: Tipp = Revanche (bei Niederlage oder freiem Kampf)
+  if (spiel.phase === 'matchEnde' && !(spiel.turnier && spiel.spielerHatGewonnen) && tap) {
+    starteKampf(gegnerIndex, kampfTurnier);
     return;
   }
 
@@ -346,7 +395,6 @@ function updateKampf(dt) {
       spawnTrefferFunken(e.x, e.y, e.richtung, e.blockt, e.ko || wuchtig);
       spiel.hitstop = e.ko ? G.hitstopKo : wuchtig ? 0.12 : e.blockt ? G.hitstopBlock : G.hitstopTreffer;
       kamera.shake = Math.max(kamera.shake, e.ko ? G.shakeKo : wuchtig ? 12 : e.blockt ? G.shakeBlock : G.shakeTreffer);
-      // Mikro-Zoom auf wuchtige Treffer — die Kamera "beißt zu"
       if (e.ko) kamera.zoom = 1.1;
       else if (wuchtig && !e.blockt) kamera.zoom = 1.06;
       if (e.ko) spieleKo();
@@ -388,17 +436,14 @@ function updateKampf(dt) {
         spiel.phasenZeit = 0;
         spieleGong();
 
-        // Belohnung gutschreiben und Fortschritt dauerhaft speichern
+        // Belohnung gutschreiben, Turnier-Fortschritt speichern
         const B = CONFIG.belohnungen;
-        const istBoss = CHARAKTERE[GEGNER_PFAD[gegnerIndex]].boss;
         spiel.belohnung = spiel.spielerHatGewonnen
-          ? (spiel.storyModus ? (istBoss ? B.bossSieg : B.storySieg) : B.freierSieg)
+          ? (spiel.turnier ? turnierBelohnung(gegnerIndex) : Math.round(B.freierSieg * weltFaktor()))
           : B.niederlage;
         spielstand.splitter += spiel.belohnung;
-        if (spiel.storyModus && spiel.spielerHatGewonnen) {
-          spielstand.fortschritt = Math.max(spielstand.fortschritt, gegnerIndex + 1);
-          // Pfad geschafft → nächster Story-Durchlauf beginnt wieder vorn
-          if (spielstand.fortschritt >= GEGNER_PFAD.length) spielstand.fortschritt = 0;
+        if (spiel.turnier && spiel.spielerHatGewonnen) {
+          spielstand.turnierFortschritt = Math.max(spielstand.turnierFortschritt, gegnerIndex + 1);
         }
         speichereSpielstand(spielstand);
       } else {
@@ -406,24 +451,20 @@ function updateKampf(dt) {
       }
     }
   } else if (spiel.phase === 'matchEnde') {
-    // Story-Modus: Nach dem Sieg geht es mit dem nächsten Story-Text weiter
-    if (spiel.storyModus && spiel.spielerHatGewonnen && spiel.phasenZeit >= 3) {
-      if (gegnerIndex < GEGNER_PFAD.length - 1) {
-        gegnerIndex++;
-        modus = 'story';
-      } else {
-        spiel.phase = 'pfadEnde';
+    if (spiel.turnier && spiel.spielerHatGewonnen && spiel.phasenZeit >= 3) {
+      if (spiel.istBoss) {
+        spiel.phase = 'pfadEnde'; // Welt abgeschlossen
         spiel.phasenZeit = 0;
+      } else {
+        zurKarte();
       }
     }
-    // Freier Kampf oder Niederlage: R für Revanche, Esc für das Menü
   }
 }
 
 function update(dt) {
   menueZeit += dt;
-  if (modus === 'menue') updateMenue();
-  else if (modus === 'gegnerWahl') updateGegnerWahl();
+  if (modus === 'karte') updateKarte();
   else if (modus === 'story') updateStory();
   else if (modus === 'ausruestung') updateAusruestung();
   else updateKampf(dt);
@@ -467,35 +508,37 @@ function renderKampf() {
   zeichnePartikel(ctx);
   ctx.restore();
 
+  zeichneAmbiente(ctx, spiel.arena, kamera.x); // Funken, Glühwürmchen, Nebel …
   zeichneVordergrund(ctx, kamera.x, spiel.arena); // Felsen vor den Kämpfern
 
   ctx.restore();
 
+  zeichneVignette(ctx);
   zeichneUI(ctx, spiel); // UI wackelt nicht mit
 
-  if (istTouchAktiv()) zeichneTouchSteuerung(ctx, spiel.spieler);
+  if (istTouchAktiv() && !panelOffen) zeichneTouchSteuerung(ctx, spiel.spieler);
+  if (spiel.istDojo && panelOffen) zeichnePanel(ctx, panelEintraege(), panelIndex, spielstand.splitter);
 }
 
-function renderMenue() {
+function renderScreens() {
   // Passende Arena als lebendiger Hintergrund, Kamera driftet langsam
   const arena =
-    modus === 'gegnerWahl' ? CHARAKTERE[GEGNER_PFAD[wahlIndex]].arena :
+    modus === 'karte' ? CHARAKTERE[GEGNER_PFAD[karteIndex]].arena :
     modus === 'story' ? CHARAKTERE[GEGNER_PFAD[gegnerIndex]].arena :
     'aschenpass';
   const drift = Math.sin(menueZeit * 0.25) * 60;
 
   zeichneStage(ctx, drift, arena);
+  zeichneAmbiente(ctx, arena, drift);
   zeichneVordergrund(ctx, drift, arena);
+  zeichneVignette(ctx);
 
-  if (modus === 'menue') {
-    zeichneMenue(ctx, menueEintraege(), menueIndex, menueZeit, spielstand.splitter);
-  } else if (modus === 'ausruestung') {
-    zeichneAusruestung(ctx, {
-      zeile: ausruestungZeile,
-      waffenEintrag: WAFFEN_LADEN[waffenIndex],
-      stilEintrag: STIL_LADEN[stilIndex],
-      spielstand,
-      zeit: menueZeit,
+  if (modus === 'karte') {
+    zeichneWeltKarte(ctx, {
+      welt: spielstand.welt,
+      eintraege: kartenEintraege(),
+      auswahl: karteIndex,
+      splitter: spielstand.splitter,
     });
   } else if (modus === 'story') {
     const karte = {
@@ -504,13 +547,19 @@ function renderMenue() {
     };
     zeichneStory(ctx, STORY[GEGNER_PFAD[gegnerIndex]], karte, GEGNER_PFAD[gegnerIndex]);
   } else {
-    zeichneGegnerWahl(ctx, CHARAKTERE[GEGNER_PFAD[wahlIndex]], menueZeit, GEGNER_PFAD[wahlIndex]);
+    zeichneAusruestung(ctx, {
+      zeile: ausruestungZeile,
+      waffenEintrag: WAFFEN_LADEN[waffenIndex],
+      stilEintrag: STIL_LADEN[stilIndex],
+      spielstand,
+      zeit: menueZeit,
+    });
   }
 }
 
 function render() {
   if (modus === 'kampf') renderKampf();
-  else renderMenue();
+  else renderScreens();
 
   if (blende > 0) {
     ctx.fillStyle = `rgba(8, 6, 16, ${(blende * 0.9).toFixed(2)})`;
@@ -538,4 +587,5 @@ function schleife(jetzt) {
 }
 
 aktiviereTouch(canvas);
+zumDojo(); // Das Spiel beginnt im Dojo — wie bei den Großen
 requestAnimationFrame(schleife);

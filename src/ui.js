@@ -4,8 +4,21 @@ import { poseZumZeitpunkt } from './animations.js';
 import { TOUCH_BUTTONS, istGedrueckt, stickZustand, istTouchAktiv } from './input.js';
 import { PORTRAITS, WAFFEN_BILDER, zeichnePortrait } from './bilder.js';
 
-// Tipp-Bereich des MENÜ-Knopfs oben in der Mitte (Touch); main.js prüft Taps dagegen
+// Tipp-Bereich des MENÜ-/KARTE-Knopfs oben in der Mitte; main.js prüft Taps dagegen
 export const MENUE_KNOPF = { x: 415, y: 50, b: 130, h: 36 };
+// Zurück-Knopf auf Karte/Ausrüstung (oben links)
+export const ZURUECK_KNOPF = { x: 20, y: 18, b: 130, h: 38 };
+// Einträge im Dojo-Seitenpanel: y-Position von Eintrag i
+export const PANEL_EINTRAG = (i) => ({ x: 22, y: 150 + i * 62, b: 290, h: 50 });
+
+// Dunkle Ränder — lenkt den Blick in die Mitte, macht jede Szene satter
+export function zeichneVignette(ctx) {
+  const g = ctx.createRadialGradient(480, 270, 250, 480, 270, 580);
+  g.addColorStop(0, 'rgba(0, 0, 0, 0)');
+  g.addColorStop(1, 'rgba(5, 4, 12, 0.45)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, CONFIG.canvas.breite, CONFIG.canvas.hoehe);
+}
 
 const BALKEN_BREITE = 340;
 const BALKEN_HOEHE = 20;
@@ -88,22 +101,22 @@ export function zeichneUI(ctx, spiel) {
     const modi = ['Steht still', 'Blockt', 'Kämpft'];
     ctx.fillText(`TRAINING · Dummy: ${modi[spiel.trainingModus]}  (T / oben tippen)`, breite / 2, 42);
   } else {
-    ctx.fillText(`Kampf ${spiel.kampfNummer} von ${spiel.kampfAnzahl}`, breite / 2, 42);
+    ctx.fillText(`Welt ${spiel.weltNummer} · Kampf ${spiel.kampfNummer} von ${spiel.kampfAnzahl}`, breite / 2, 42);
   }
 
-  // Auf Touch-Geräten: MENÜ-Knopf, um den Kampf verlassen zu können
-  if (istTouchAktiv()) {
+  // Knopf oben Mitte: im Dojo öffnet er das Menü-Panel, im Kampf geht's zur Karte
+  {
     const K = MENUE_KNOPF;
-    ctx.fillStyle = 'rgba(10, 8, 18, 0.4)';
-    ctx.strokeStyle = 'rgba(243, 233, 247, 0.4)';
+    ctx.fillStyle = 'rgba(10, 8, 18, 0.45)';
+    ctx.strokeStyle = 'rgba(255, 210, 125, 0.45)';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.roundRect(K.x, K.y, K.b, K.h, 10);
     ctx.fill();
     ctx.stroke();
-    ctx.fillStyle = 'rgba(243, 233, 247, 0.75)';
+    ctx.fillStyle = 'rgba(243, 233, 247, 0.85)';
     ctx.font = 'bold 14px system-ui, sans-serif';
-    ctx.fillText('✕ MENÜ', K.x + K.b / 2, K.y + 23);
+    ctx.fillText(spiel.istDojo ? '☰  MENÜ' : '✕  KARTE', K.x + K.b / 2, K.y + 23);
   }
 
   if (spiel.phase === 'intro') {
@@ -125,12 +138,10 @@ export function zeichneUI(ctx, spiel) {
     untertitel(ctx, `${spiel.rundenSieger} holt die Runde`);
   } else if (spiel.phase === 'matchEnde') {
     ansage(ctx, `${spiel.matchSieger.toUpperCase()} GEWINNT`, 56, spiel.phasenZeit);
-    if (spiel.storyModus && spiel.spielerHatGewonnen && spiel.naechsterGegner) {
-      untertitel(ctx, `Der Pfad führt weiter … (${spiel.naechsterGegner} wartet)`);
-    } else if (spiel.storyModus && spiel.spielerHatGewonnen) {
-      untertitel(ctx, 'Das Ende des Pfads ist nah …');
+    if (spiel.turnier && spiel.spielerHatGewonnen) {
+      untertitel(ctx, spiel.istBoss ? 'Die Welt ist bezwungen …' : 'Zurück zur Karte …');
     } else {
-      untertitel(ctx, 'R für Revanche · Esc für das Menü');
+      untertitel(ctx, 'R / Tippen: Revanche · Esc: Karte');
     }
     // Verdiente Schatten-Splitter anzeigen
     if (spiel.belohnung > 0) {
@@ -140,8 +151,8 @@ export function zeichneUI(ctx, spiel) {
       ctx.fillText(`+${spiel.belohnung} ◆`, breite / 2, 300);
     }
   } else if (spiel.phase === 'pfadEnde') {
-    ansage(ctx, 'PFAD BEZWUNGEN', 60, spiel.phasenZeit);
-    untertitel(ctx, 'Enter für das Menü');
+    ansage(ctx, `WELT ${spiel.weltNummer} BEZWUNGEN`, 60, spiel.phasenZeit);
+    untertitel(ctx, `Enter / Tippen — weiter zu Welt ${spiel.weltNummer + 1} (Gegner stärker, Belohnung größer)`);
   }
 
   // Treffer-Serien ("Kombo-Zähler") unter den Lebensbalken
@@ -208,6 +219,143 @@ export function zeichneTouchSteuerung(ctx, spieler) {
     ctx.font = istSymbol ? '30px system-ui, sans-serif' : 'bold 13px system-ui, sans-serif';
     ctx.fillText(b.label, b.x + b.b / 2, b.y + b.h / 2 + (istSymbol ? 11 : 5));
   }
+  ctx.textAlign = 'left';
+}
+
+// Dojo-Seitenpanel (öffnet links, wie in Shadow Fight)
+export function zeichnePanel(ctx, eintraege, auswahl, splitter) {
+  // Spielfeld abdunkeln, Panel links
+  ctx.fillStyle = 'rgba(5, 4, 12, 0.5)';
+  ctx.fillRect(0, 0, CONFIG.canvas.breite, CONFIG.canvas.hoehe);
+  ctx.fillStyle = 'rgba(14, 10, 24, 0.97)';
+  ctx.fillRect(0, 0, 334, CONFIG.canvas.hoehe);
+  ctx.strokeStyle = 'rgba(255, 210, 125, 0.5)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(334, 0);
+  ctx.lineTo(334, CONFIG.canvas.hoehe);
+  ctx.stroke();
+
+  ctx.textAlign = 'left';
+  ctx.fillStyle = 'rgba(255, 235, 200, 0.97)';
+  ctx.font = 'bold 28px system-ui, sans-serif';
+  ctx.fillText('SCHATTENPFAD', 24, 60);
+  ctx.fillStyle = '#ffd27d';
+  ctx.font = 'bold 19px system-ui, sans-serif';
+  ctx.fillText(`◆ ${splitter}`, 24, 95);
+
+  eintraege.forEach((eintrag, i) => {
+    const r = PANEL_EINTRAG(i);
+    const gewaehlt = i === auswahl;
+    ctx.fillStyle = gewaehlt ? 'rgba(255, 210, 125, 0.14)' : 'rgba(255, 255, 255, 0.03)';
+    ctx.strokeStyle = gewaehlt ? 'rgba(255, 210, 125, 0.85)' : 'rgba(243, 233, 247, 0.25)';
+    ctx.lineWidth = gewaehlt ? 2 : 1.2;
+    ctx.beginPath();
+    ctx.roundRect(r.x, r.y, r.b, r.h, 12);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = gewaehlt ? '#ffd27d' : 'rgba(243, 233, 247, 0.85)';
+    ctx.font = gewaehlt ? 'bold 19px system-ui, sans-serif' : '18px system-ui, sans-serif';
+    ctx.fillText(eintrag, r.x + 18, r.y + 32);
+  });
+
+  ctx.fillStyle = 'rgba(243, 233, 247, 0.45)';
+  ctx.font = '14px system-ui, sans-serif';
+  ctx.fillText('↑↓ · Enter · Esc schließt', 24, 512);
+}
+
+// Welt-Karte: die Stationen der aktuellen Welt als Portrait-Knoten.
+// eintraege: [{ id, name, status: 'besiegt'|'offen'|'gesperrt', belohnung }]
+export function zeichneWeltKarte(ctx, daten) {
+  const { welt, eintraege, auswahl, splitter } = daten;
+  const breite = CONFIG.canvas.breite;
+  schleier(ctx, 0.55);
+  zeichneSplitter(ctx, splitter);
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(255, 235, 200, 0.97)';
+  ctx.font = 'bold 32px system-ui, sans-serif';
+  ctx.fillText(`WELT ${welt} — DER SCHATTENPFAD`, breite / 2, 70);
+
+  // Zurück-Knopf
+  const Z = ZURUECK_KNOPF;
+  ctx.fillStyle = 'rgba(10, 8, 18, 0.45)';
+  ctx.strokeStyle = 'rgba(243, 233, 247, 0.4)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.roundRect(Z.x, Z.y, Z.b, Z.h, 10);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(243, 233, 247, 0.8)';
+  ctx.font = 'bold 14px system-ui, sans-serif';
+  ctx.fillText('‹ DOJO', Z.x + Z.b / 2, Z.y + 25);
+
+  // Verbindungslinie des Pfads
+  const n = eintraege.length;
+  const abstand = 165;
+  const startX = breite / 2 - ((n - 1) * abstand) / 2;
+  const knotenY = 150;
+  ctx.strokeStyle = 'rgba(255, 210, 125, 0.3)';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(startX, knotenY + 55);
+  ctx.lineTo(startX + (n - 1) * abstand, knotenY + 55);
+  ctx.stroke();
+
+  for (let i = 0; i < n; i++) {
+    const e = eintraege[i];
+    const istBoss = i === n - 1;
+    const groesse = istBoss ? 126 : 110;
+    const px = startX + i * abstand - groesse / 2;
+    const py = knotenY + 55 - groesse / 2 - (istBoss ? 8 : 0);
+
+    const alpha = e.status === 'gesperrt' ? 0.3 : 1;
+    zeichnePortrait(ctx, PORTRAITS[e.id], px, py, groesse, alpha);
+
+    // Status-Rahmen: besiegt = gold, offen = pulsierend, gesperrt = Schloss
+    if (e.status === 'besiegt') {
+      ctx.strokeStyle = '#ffd27d';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.roundRect(px, py, groesse, groesse, 14);
+      ctx.stroke();
+    } else if (e.status === 'gesperrt') {
+      ctx.fillStyle = 'rgba(243, 233, 247, 0.85)';
+      ctx.font = `bold ${istBoss ? 40 : 34}px system-ui, sans-serif`;
+      ctx.fillText('🔒', px + groesse / 2, py + groesse / 2 + 12);
+    }
+    if (i === auswahl) {
+      const puls = 4 + 2 * Math.sin(performance.now() / 160);
+      ctx.strokeStyle = 'rgba(255, 235, 200, 0.95)';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.roundRect(px - puls, py - puls, groesse + puls * 2, groesse + puls * 2, 18);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = i === auswahl ? '#ffd27d' : 'rgba(243, 233, 247, 0.75)';
+    ctx.font = `${i === auswahl ? 'bold ' : ''}15px system-ui, sans-serif`;
+    ctx.fillText(istBoss ? `★ ${e.name}` : e.name, px + groesse / 2, py + groesse + 24);
+  }
+
+  // Infos zum gewählten Knoten
+  const e = eintraege[auswahl];
+  ctx.fillStyle = 'rgba(243, 233, 247, 0.9)';
+  ctx.font = '19px system-ui, sans-serif';
+  const info =
+    e.status === 'gesperrt' ? (auswahl === n - 1 ? 'Besiege erst alle vier Wächter, dann öffnet sich der Weg zum Boss.' : 'Noch verschlossen — folge dem Pfad.') :
+    e.status === 'besiegt' ? `Erneut herausfordern · Sieg: +${e.belohnung} ◆` :
+    `Nächster Kampf · Sieg: +${e.belohnung} ◆`;
+  ctx.fillText(info, breite / 2, 400);
+  if (e.beschreibung) {
+    ctx.fillStyle = 'rgba(243, 233, 247, 0.55)';
+    ctx.font = '15px system-ui, sans-serif';
+    ctx.fillText(e.beschreibung, breite / 2, 428);
+  }
+
+  ctx.fillStyle = 'rgba(243, 233, 247, 0.5)';
+  ctx.font = '15px system-ui, sans-serif';
+  ctx.fillText('← → wählen · Enter / Tippen kämpfen · Esc Dojo', breite / 2, 505);
   ctx.textAlign = 'left';
 }
 
