@@ -32,6 +32,9 @@ export class Kaempfer {
     this.rolleRichtung = 1;    // Bildschirm-Richtung der aktuellen Rolle
     this.saltoRichtung = 1;    // Bildschirm-Richtung des aktuellen Saltos
     this.teleportiert = false; // Schattenschritt: wurde schon gesprungen?
+    this.letzterTrefferZug = null; // für die Spam-Strafe: welcher Angriff traf zuletzt?
+    this.spamZaehler = 0;
+    this.trefferSerie = { anzahl: 0, timer: 0 }; // Kombo-Zähler fürs UI
     this.kiGedaechtnis = { timer: 0, eingabe: null };
     // Für weiche Übergänge: die zuletzt gezeichnete Pose wird beim
     // Zustandswechsel als Startpunkt der Überblendung gemerkt.
@@ -50,7 +53,7 @@ export class Kaempfer {
 
   // Boden-Angriffe (der Flugkick hat einen eigenen Zweig, weil Schwerkraft wirkt)
   istAngriff() {
-    return this.zustand === 'schlag' || this.zustand === 'tritt' || this.zustand === 'spezial' || this.zustand === 'wurf';
+    return ['schlag', 'schlag2', 'tritt', 'spezial', 'wurf'].includes(this.zustand);
   }
 
   wechsle(zustand) {
@@ -59,7 +62,7 @@ export class Kaempfer {
     this.hatGetroffen = false;
     this.uebergangVon = this.letztePose;
     this.uebergangZeit = 0;
-    if (['schlag', 'tritt', 'wurf', 'luftTritt', 'rolle', 'salto'].includes(zustand)) {
+    if (['schlag', 'schlag2', 'tritt', 'wurf', 'luftTritt', 'rolle', 'salto'].includes(zustand)) {
       spieleSchwung();
     } else if (zustand === 'spezial') {
       spieleSpezialStart();
@@ -83,6 +86,9 @@ export class Kaempfer {
     this.rueckstoss = 0;
     this.energie = 0;
     this.aktionsPuffer = null;
+    this.letzterTrefferZug = null;
+    this.spamZaehler = 0;
+    this.trefferSerie = { anzahl: 0, timer: 0 };
     this.wechsle('stehen');
   }
 
@@ -101,6 +107,12 @@ export class Kaempfer {
     else if (this.aktionsPuffer) {
       this.aktionsPuffer.alter += dt;
       if (this.aktionsPuffer.alter > CONFIG.kombo.pufferDauer) this.aktionsPuffer = null;
+    }
+
+    // Treffer-Serie reißt ab, wenn zu lange kein Treffer landet
+    if (this.trefferSerie.timer > 0) {
+      this.trefferSerie.timer -= dt;
+      if (this.trefferSerie.timer <= 0) this.trefferSerie.anzahl = 0;
     }
 
     // Der Anzeige-Balken gleitet dem echten HP-Stand hinterher
@@ -141,7 +153,10 @@ export class Kaempfer {
         if (wunsch && wunsch !== 'spezial' && this.kombo < CONFIG.kombo.maxKette - 1 && this.zustandZeit >= kettenFenster) {
           this.kombo++;
           this.aktionsPuffer = null;
-          this.wechsle(wunsch);
+          // Schlag auf Schlag wechselt die Faust: gerader Stoß → Haken → gerader Stoß
+          let naechster = wunsch;
+          if (naechster === 'schlag' && this.zustand === 'schlag') naechster = 'schlag2';
+          this.wechsle(naechster);
           return;
         }
       }
@@ -315,7 +330,7 @@ export class Kaempfer {
       skalierung: this.skalierung,
       waffe: this.charakter.waffe,
       extras: this.charakter.extras,
-      farbe: this.charakter.farbe ?? null,
+      farben: this.charakter.farben ?? null,
     });
 
     if (dreht) ctx.restore();

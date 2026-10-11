@@ -1,7 +1,7 @@
 // Service Worker: speichert das komplette Spiel im Browser-Cache,
 // damit es installiert und offline gespielt werden kann.
 // Bei Änderungen die Versionsnummer erhöhen — dann wird neu gecacht.
-const CACHE = 'schattenpfad-v2';
+const CACHE = 'schattenpfad-v3';
 
 const KERN = [
   './',
@@ -35,6 +35,16 @@ const KERN = [
   './assets/backgrounds/leere-himmel.png',
   './assets/backgrounds/leere-huegel.png',
   './assets/ui/titelbild.png',
+  './assets/ui/waffe-schwert.png',
+  './assets/ui/waffe-dolch.png',
+  './assets/ui/waffe-stab.png',
+  './assets/portraits/juro.png',
+  './assets/portraits/scharr.png',
+  './assets/portraits/veyra.png',
+  './assets/portraits/lith.png',
+  './assets/portraits/dorn.png',
+  './assets/portraits/umbra.png',
+  './src/bilder.js',
 ];
 
 self.addEventListener('install', (ev) => {

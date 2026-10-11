@@ -1,5 +1,20 @@
 import { CONFIG } from './config.js';
 
+// Dunklere Variante einer Hex-Farbe (für hintere Gliedmaßen → Tiefe)
+function dunkler(hex, faktor) {
+  const r = Math.round(parseInt(hex.slice(1, 3), 16) * faktor);
+  const g = Math.round(parseInt(hex.slice(3, 5), 16) * faktor);
+  const b = Math.round(parseInt(hex.slice(5, 7), 16) * faktor);
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+// Klingen-/Holzfarben der Waffen
+const WAFFEN_FARBEN = {
+  schwert: '#aeb6c4',
+  dolch: '#49404f',
+  stab: '#6b4a32',
+};
+
 // Zeichnet einen Kämpfer als schwarze Silhouette aus dicken, runden Linien.
 // Winkel-Konvention: 0 = senkrecht (Gliedmaßen hängen nach unten, Rumpf zeigt nach oben),
 // positive Winkel drehen nach vorn in Blickrichtung. So funktioniert die Pose
@@ -9,7 +24,7 @@ import { CONFIG } from './config.js';
 // skalierung streckt das ganze Skelett — so entstehen große und kleine Figuren
 // aus denselben Posen.
 export function zeichneSkelett(ctx, x, fussY, blick, pose, optionen = {}) {
-  const { einfaerbung = null, skalierung = 1, waffe = null, extras = [], farbe = null } = optionen;
+  const { einfaerbung = null, skalierung = 1, waffe = null, extras = [], farben = null } = optionen;
   const s = CONFIG.skelett;
   const sk = skalierung;
   const hx = x;
@@ -63,7 +78,7 @@ export function zeichneSkelett(ctx, x, fussY, blick, pose, optionen = {}) {
     const [wx, wy] = ende(ex, ey, unterarmWinkel, s.unterarm);
     knochen(sx, sy, ex, ey, s.linienBreite, farbe);
     knochen(ex, ey, wx, wy, s.linienBreite, farbe);
-    if (mitWaffe && waffe) zeichneWaffe(wx, wy, unterarmWinkel, farbe);
+    if (mitWaffe && waffe) zeichneWaffe(wx, wy, unterarmWinkel, f.waffe);
   };
 
   const bein = (huefte, knie, farbe) => {
@@ -74,17 +89,22 @@ export function zeichneSkelett(ctx, x, fussY, blick, pose, optionen = {}) {
     knochen(ex, ey, fx, fy, s.linienBreite * 1.1, farbe);
   };
 
-  // Hintere Gliedmaßen minimal heller — gibt der Silhouette Tiefe.
-  // Charaktere können eine eigene Grundfarbe haben (z. B. der violette Endboss).
+  // Echte Charakter-Farben: Haut, Oberkörper, Beine, Akzent.
+  // Hintere Gliedmaßen etwas dunkler — gibt der Figur Tiefe.
   // Bei einem Treffer wird die ganze Figur kurz eingefärbt (Hit-Flash).
-  const hinten = einfaerbung ?? farbe?.hinten ?? '#1f1f28';
-  const vorn = einfaerbung ?? farbe?.vorn ?? '#0a0a0f';
+  const basis = farben ?? { haut: '#0a0a0f', oben: '#0a0a0f', unten: '#0a0a0f', akzent: '#1f1f28' };
+  const f = einfaerbung
+    ? { haut: einfaerbung, oben: einfaerbung, unten: einfaerbung, akzent: einfaerbung, waffe: einfaerbung }
+    : { ...basis, waffe: WAFFEN_FARBEN[waffe] ?? '#aeb6c4' };
+  const obenHinten = einfaerbung ?? dunkler(basis.oben, 0.62);
+  const untenHinten = einfaerbung ?? dunkler(basis.unten, 0.62);
+  const vorn = f.akzent; // für Extras
 
-  bein(pose.hHuefte, pose.hKnie, hinten);
-  arm(pose.hSchulter, pose.hEllbogen, hinten);
+  bein(pose.hHuefte, pose.hKnie, untenHinten);
+  arm(pose.hSchulter, pose.hEllbogen, obenHinten);
 
-  knochen(hx, hy, sx, sy, s.linienBreite * 1.7, vorn);
-  ctx.fillStyle = vorn;
+  knochen(hx, hy, sx, sy, s.linienBreite * 1.7, f.oben);
+  ctx.fillStyle = f.haut;
   ctx.beginPath();
   ctx.arc(kx, ky, s.kopfRadius * sk, 0, Math.PI * 2);
   ctx.fill();
@@ -119,6 +139,6 @@ export function zeichneSkelett(ctx, x, fussY, blick, pose, optionen = {}) {
     ctx.fill();
   }
 
-  bein(pose.vHuefte, pose.vKnie, vorn);
-  arm(pose.vSchulter, pose.vEllbogen, vorn, true); // Waffe liegt in der vorderen Hand
+  bein(pose.vHuefte, pose.vKnie, f.unten);
+  arm(pose.vSchulter, pose.vEllbogen, f.oben, true); // Waffe liegt in der vorderen Hand
 }

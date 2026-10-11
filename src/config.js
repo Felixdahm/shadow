@@ -36,6 +36,8 @@ export const CONFIG = {
   // Höhe der Hitbox über dem Boden und Rückstoß für den Getroffenen.
   angriffe: {
     schlag:  { dauer: 0.38, aktivVon: 0.12, aktivBis: 0.24, schaden: 8,  reichweite: 78,  hoeheVomBoden: 140, rueckstoss: 170 },
+    // Kombo-Haken mit der hinteren Faust (ohne Waffen-Bonus, etwas kürzer)
+    schlag2: { dauer: 0.38, aktivVon: 0.12, aktivBis: 0.24, schaden: 9,  reichweite: 70,  hoeheVomBoden: 140, rueckstoss: 190 },
     tritt:   { dauer: 0.52, aktivVon: 0.18, aktivBis: 0.32, schaden: 13, reichweite: 95,  hoeheVomBoden: 82,  rueckstoss: 260 },
     spezial: { dauer: 0.6,  aktivVon: 0.25, aktivBis: 0.42, schaden: 24, reichweite: 110, hoeheVomBoden: 120, rueckstoss: 430 },
     // Flugkick: Höhe ist relativ zu den Füßen des Springenden — trifft also dort, wo er gerade fliegt
@@ -104,6 +106,11 @@ export const CONFIG = {
     maxKette: 3,        // höchstens 3 Angriffe hintereinander
     fensterNach: 0.05,  // so lange nach dem Treffer-Fenster darf verkettet werden
     pufferDauer: 0.25,  // Angriffs-Eingaben bleiben so lange gültig (wichtig auf Touch)
+    finisherSchaden: 1.4,   // der 3. Treffer der Kette haut deutlich härter rein
+    finisherRueckstoss: 1.7,
+    spamAbzug: 0.15,        // gleicher Angriff wiederholt → je 15 % weniger Schaden
+    spamMinimum: 0.5,       // nie unter 50 % des Grundschadens
+    serienFenster: 1.4,     // s ohne Treffer, bis die Treffer-Serie abreißt
   },
 
   training: {

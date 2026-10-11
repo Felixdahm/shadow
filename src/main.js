@@ -83,6 +83,7 @@ function neuerKampf() {
     kampfAnzahl: GEGNER_PFAD.length,
     naechsterGegner: naechsterName,
     arena: gegnerDaten.arena ?? 'aschenpass',
+    gegnerId: GEGNER_PFAD[gegnerIndex],
     storyModus,
     training: false,
     trainingModus: 0,
@@ -110,6 +111,7 @@ function neuesTraining() {
     kampfAnzahl: 1,
     naechsterGegner: null,
     arena: 'aschenpass',
+    gegnerId: 'scharr',
     storyModus: false,
     training: true,
     trainingModus: 0, // 0 = steht, 1 = blockt, 2 = kämpft
@@ -339,11 +341,12 @@ function updateKampf(dt) {
   } else if (kampfAktiv) {
     const ereignisse = verarbeiteKampf(spieler, gegner);
     for (const e of ereignisse) {
-      spawnTrefferFunken(e.x, e.y, e.richtung, e.blockt, e.ko || e.spezial || e.wurf);
-      spiel.hitstop = e.ko ? G.hitstopKo : e.spezial || e.wurf ? 0.12 : e.blockt ? G.hitstopBlock : G.hitstopTreffer;
-      kamera.shake = Math.max(kamera.shake, e.ko ? G.shakeKo : e.spezial || e.wurf ? 12 : e.blockt ? G.shakeBlock : G.shakeTreffer);
+      const wuchtig = e.spezial || e.wurf || e.finisher;
+      spawnTrefferFunken(e.x, e.y, e.richtung, e.blockt, e.ko || wuchtig);
+      spiel.hitstop = e.ko ? G.hitstopKo : wuchtig ? 0.12 : e.blockt ? G.hitstopBlock : G.hitstopTreffer;
+      kamera.shake = Math.max(kamera.shake, e.ko ? G.shakeKo : wuchtig ? 12 : e.blockt ? G.shakeBlock : G.shakeTreffer);
       if (e.ko) spieleKo();
-      else if (e.spezial) spieleSpezialTreffer();
+      else if (wuchtig && !e.blockt) spieleSpezialTreffer();
       else if (e.blockt) spieleBlock();
       else spieleTreffer();
     }
@@ -488,9 +491,9 @@ function renderMenue() {
       stationen: GEGNER_PFAD.map((id) => CHARAKTERE[id].name),
       aktuell: gegnerIndex,
     };
-    zeichneStory(ctx, STORY[GEGNER_PFAD[gegnerIndex]], karte);
+    zeichneStory(ctx, STORY[GEGNER_PFAD[gegnerIndex]], karte, GEGNER_PFAD[gegnerIndex]);
   } else {
-    zeichneGegnerWahl(ctx, CHARAKTERE[GEGNER_PFAD[wahlIndex]], menueZeit);
+    zeichneGegnerWahl(ctx, CHARAKTERE[GEGNER_PFAD[wahlIndex]], menueZeit, GEGNER_PFAD[wahlIndex]);
   }
 }
 

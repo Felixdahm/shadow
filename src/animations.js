@@ -40,6 +40,13 @@ const SCHLAG_TREFFEN   = p({ vSchulter: 1.55, vEllbogen: 0.06, rumpf: 0.3, kopf:
 const SCHLAG_DURCHZUG  = p({ vSchulter: 1.72, vEllbogen: 0.18, rumpf: 0.36, kopf: -0.12, hSchulter: 0.8, hEllbogen: 2.0, hueftFaktor: 0.92, vHuefte: 0.5, hHuefte: -0.4 });
 const SCHLAG_ZURUECK   = p({ vSchulter: 1.05, vEllbogen: 1.0, rumpf: 0.18, hueftFaktor: 0.95 });
 
+// Zweiter Schlag der Kombo: die HINTERE Faust stößt vor (Haken) —
+// so wechseln die Arme sichtbar ab, statt denselben Schlag zu wiederholen.
+const SCHLAG2_AUSHOLEN = p({ hSchulter: -0.15, hEllbogen: 2.6, vSchulter: 0.7, vEllbogen: 2.0, rumpf: -0.08, hueftFaktor: 0.94 });
+const SCHLAG2_TREFFEN  = p({ hSchulter: 1.6, hEllbogen: 0.05, vSchulter: 0.5, vEllbogen: 2.1, rumpf: 0.32, kopf: -0.1, hueftFaktor: 0.93, vHuefte: 0.5, hHuefte: -0.3 });
+const SCHLAG2_DURCHZUG = p({ hSchulter: 1.75, hEllbogen: 0.18, vSchulter: 0.55, vEllbogen: 2.0, rumpf: 0.38, kopf: -0.12, hueftFaktor: 0.92 });
+const SCHLAG2_ZURUECK  = p({ hSchulter: 0.9, hEllbogen: 1.2, rumpf: 0.16 });
+
 // Tritt: Knie anheben → explosiv strecken → durchschwingen → Knie wieder anwinkeln
 const TRITT_HEBEN     = p({ vHuefte: 1.25, vKnie: 1.9, rumpf: -0.12, hueftFaktor: 0.93, hHuefte: -0.12, hKnie: 0.2, vSchulter: 0.7, hSchulter: 0.2 });
 const TRITT_TREFFEN   = p({ vHuefte: 1.5, vKnie: 0.05, rumpf: -0.38, kopf: 0.15, hueftFaktor: 0.9, hHuefte: -0.2, hKnie: 0.25, vSchulter: 0.9, vEllbogen: 1.2, hSchulter: -0.3, hEllbogen: 1.0 });
@@ -124,6 +131,14 @@ export const ANIMATIONEN = {
     { t: 0.13, pose: SCHLAG_TREFFEN, art: 'zack' },
     { t: 0.2, pose: SCHLAG_DURCHZUG, art: 'weich' },
     { t: 0.28, pose: SCHLAG_ZURUECK, art: 'weich' },
+    { t: 0.38, pose: STAND, art: 'weich' },
+  ] },
+  schlag2: { dauer: 0.38, loop: false, frames: [
+    { t: 0, pose: STAND },
+    { t: 0.08, pose: SCHLAG2_AUSHOLEN, art: 'weich' },
+    { t: 0.13, pose: SCHLAG2_TREFFEN, art: 'zack' },
+    { t: 0.2, pose: SCHLAG2_DURCHZUG, art: 'weich' },
+    { t: 0.28, pose: SCHLAG2_ZURUECK, art: 'weich' },
     { t: 0.38, pose: STAND, art: 'weich' },
   ] },
   tritt: { dauer: 0.52, loop: false, frames: [

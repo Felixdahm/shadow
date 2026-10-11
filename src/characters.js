@@ -1,10 +1,13 @@
 // Jede Figur ist ein reines Datenobjekt: gleiches Skelett, andere Werte = andere Figur.
 // skalierung  → Körpergröße (skaliert auch Reichweite und Hurtbox)
 // tempoFaktor → Lauf- UND Angriffsgeschwindigkeit
-// extras      → Silhouetten-Details (Stirnband, Zopf, Kapuze), rein optisch
+// extras      → Details (Stirnband, Zopf, Kapuze), passend zum Portrait
+// farben      → echte Charakter-Farben: haut, oben (Oberkörper/Arme),
+//               unten (Beine), akzent (Extras). Statt schwarzer Silhouetten.
 
 export const CHARAKTERE = {
   juro: {
+    farben: { haut: '#e8b48a', oben: '#2c3a5e', unten: '#1f2a45', akzent: '#c43b3b' },
     name: 'Juro',
     skalierung: 1,
     tempoFaktor: 1,
@@ -15,6 +18,7 @@ export const CHARAKTERE = {
     kiStil: null, // wird vom Spieler gesteuert
   },
   scharr: {
+    farben: { haut: '#c99b6e', oben: '#6b5a48', unten: '#4a3f33', akzent: '#8a7a64' },
     name: 'Scharr',
     skalierung: 0.98,
     tempoFaktor: 1,
@@ -27,6 +31,7 @@ export const CHARAKTERE = {
     beschreibung: 'Wächter des Aschenpasses · unbewaffnet · ausgewogen',
   },
   veyra: {
+    farben: { haut: '#e6c3a0', oben: '#2e6e6a', unten: '#234f4d', akzent: '#b8c4cc' },
     name: 'Veyra',
     skalierung: 0.9,
     tempoFaktor: 1.3,
@@ -39,6 +44,7 @@ export const CHARAKTERE = {
     beschreibung: 'Stabkämpferin des Mondhains · schnell, aber zerbrechlich',
   },
   lith: {
+    farben: { haut: '#d9a06e', oben: '#5a2a24', unten: '#3c1f1b', akzent: '#d4452a' },
     name: 'Lith',
     skalierung: 0.88,
     tempoFaktor: 1.45,
@@ -51,6 +57,7 @@ export const CHARAKTERE = {
     beschreibung: 'Messertänzer der Glutschmiede · rastlos, wild, kaum zu fassen',
   },
   dorn: {
+    farben: { haut: '#b9a584', oben: '#2f4a33', unten: '#24352a', akzent: '#3a5c40' },
     name: 'Dorn',
     skalierung: 1.12,
     tempoFaktor: 0.78,
@@ -63,6 +70,7 @@ export const CHARAKTERE = {
     beschreibung: 'Herr der Nebelschlucht · langsam, blockt viel, trifft brutal',
   },
   umbra: {
+    farben: { haut: '#241238', oben: '#190b2b', unten: '#140925', akzent: '#5b2d8a' },
     name: 'Umbra',
     skalierung: 1.02,
     tempoFaktor: 1.05,
@@ -73,7 +81,6 @@ export const CHARAKTERE = {
     kiStil: 'boss',
     arena: 'leere',
     boss: true, // eigene Mechanik: Schattenschritt (Teleport) + Wut-Phase unter 50 % HP
-    farbe: { vorn: '#190b2b', hinten: '#2b1546' },
     beschreibung: 'Juros eigener Schatten · Endboss · erscheint, wo du nicht hinsiehst',
   },
 };

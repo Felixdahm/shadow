@@ -2,6 +2,7 @@ import { CONFIG } from './config.js';
 import { zeichneSkelett } from './skeleton.js';
 import { poseZumZeitpunkt } from './animations.js';
 import { TOUCH_BUTTONS, istGedrueckt, stickZustand, istTouchAktiv } from './input.js';
+import { PORTRAITS, WAFFEN_BILDER, zeichnePortrait } from './bilder.js';
 
 // Tipp-Bereich des MENÜ-Knopfs oben in der Mitte (Touch); main.js prüft Taps dagegen
 export const MENUE_KNOPF = { x: 415, y: 50, b: 130, h: 36 };
@@ -106,6 +107,14 @@ export function zeichneUI(ctx, spiel) {
   }
 
   if (spiel.phase === 'intro') {
+    // VS-Screen: beide Portraits blenden ein, dazwischen Runde/FIGHT
+    const alpha = Math.min(1, spiel.phasenZeit * 3);
+    zeichnePortrait(ctx, PORTRAITS.juro, 70, 110, 190, alpha);
+    zeichnePortrait(ctx, PORTRAITS[spiel.gegnerId], breite - 70 - 190, 110, 190, alpha);
+    ctx.fillStyle = `rgba(255, 235, 200, ${(alpha * 0.9).toFixed(2)})`;
+    ctx.font = 'bold 40px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('VS', breite / 2, 330);
     if (spiel.phasenZeit < 0.85) {
       ansage(ctx, `RUNDE ${spiel.runde}`, 64, spiel.phasenZeit);
     } else {
@@ -135,7 +144,22 @@ export function zeichneUI(ctx, spiel) {
     untertitel(ctx, 'Enter für das Menü');
   }
 
+  // Treffer-Serien ("Kombo-Zähler") unter den Lebensbalken
+  serieAnzeige(ctx, spiel.spieler, 40, false);
+  serieAnzeige(ctx, spiel.gegner, breite - 40, true);
+
   ctx.textAlign = 'left';
+}
+
+function serieAnzeige(ctx, kaempfer, x, gespiegelt) {
+  const s = kaempfer.trefferSerie;
+  if (s.anzahl < 2) return;
+  // frisch gelandete Treffer lassen die Zahl kurz aufpoppen
+  const frisch = Math.max(0, s.timer - (CONFIG.kombo.serienFenster - 0.18)) / 0.18;
+  ctx.fillStyle = `rgba(255, 210, 125, ${(0.65 + 0.35 * frisch).toFixed(2)})`;
+  ctx.font = `bold ${Math.round(26 + 8 * frisch)}px system-ui, sans-serif`;
+  ctx.textAlign = gespiegelt ? 'right' : 'left';
+  ctx.fillText(`${s.anzahl} TREFFER`, x, 125);
 }
 
 // Bildschirm-Steuerung für Touch-Geräte: virtueller Joystick links,
@@ -275,11 +299,13 @@ export function zeichneAusruestung(ctx, daten) {
   ctx.fillText('AUSRÜSTUNG', mitte, 90);
 
   // Juro-Vorschau rechts — zeigt sofort die gerade angewählte Kombination,
-  // auch wenn sie noch nicht gekauft ist
+  // auch wenn sie noch nicht gekauft ist. Darüber das Artwork der Waffe.
+  zeichnePortrait(ctx, WAFFEN_BILDER[waffenEintrag.id], 630, 115, 150);
   const pose = poseZumZeitpunkt('stehen', zeit);
-  zeichneSkelett(ctx, 740, CONFIG.physik.bodenY, -1, pose, {
+  zeichneSkelett(ctx, 810, CONFIG.physik.bodenY, -1, pose, {
     waffe: waffenEintrag.id,
     extras: [stilEintrag.id],
+    farben: { haut: '#e8b48a', oben: '#2c3a5e', unten: '#1f2a45', akzent: '#c43b3b' },
   });
 
   const reihe = (y, label, eintrag, aktiv) => {
@@ -362,7 +388,7 @@ function zeichneKarte(ctx, karte, y) {
   }
 }
 
-export function zeichneStory(ctx, text, karte) {
+export function zeichneStory(ctx, text, karte, portraitId) {
   const mitte = CONFIG.canvas.breite / 2;
   schleier(ctx, 0.68);
 
@@ -373,9 +399,17 @@ export function zeichneStory(ctx, text, karte) {
 
   if (karte) zeichneKarte(ctx, karte, 165);
 
+  // Portrait des wartenden Gegners neben dem Text
+  zeichnePortrait(ctx, PORTRAITS[portraitId], 668, 232, 200);
+
+  ctx.save();
+  ctx.translate(-150, 0); // Text rückt nach links, Portrait hat rechts Platz
+  ctx.textAlign = 'center';
   ctx.fillStyle = 'rgba(243, 233, 247, 0.92)';
   ctx.font = '22px system-ui, sans-serif';
-  textBlock(ctx, text, 250, 660, 35);
+  textBlock(ctx, text, 260, 500, 35);
+  ctx.restore();
+  ctx.textAlign = 'center';
 
   ctx.fillStyle = 'rgba(243, 233, 247, 0.55)';
   ctx.font = '17px system-ui, sans-serif';
@@ -383,7 +417,7 @@ export function zeichneStory(ctx, text, karte) {
   ctx.textAlign = 'left';
 }
 
-export function zeichneGegnerWahl(ctx, charakter, zeit) {
+export function zeichneGegnerWahl(ctx, charakter, zeit, portraitId) {
   const mitte = CONFIG.canvas.breite / 2;
   schleier(ctx, 0.35);
 
@@ -392,12 +426,15 @@ export function zeichneGegnerWahl(ctx, charakter, zeit) {
   ctx.font = 'bold 34px system-ui, sans-serif';
   ctx.fillText('FREIER KAMPF', mitte, 110);
 
-  // Der gewählte Gegner steht atmend in seiner eigenen Arena
+  // Portrait links, daneben steht der Gegner atmend in seiner eigenen Arena
+  zeichnePortrait(ctx, PORTRAITS[portraitId], 95, 180, 230);
+
   const pose = poseZumZeitpunkt('stehen', zeit);
-  zeichneSkelett(ctx, mitte, CONFIG.physik.bodenY, -1, pose, {
+  zeichneSkelett(ctx, mitte + 60, CONFIG.physik.bodenY, -1, pose, {
     skalierung: charakter.skalierung,
     waffe: charakter.waffe,
     extras: charakter.extras,
+    farben: charakter.farben,
   });
 
   ctx.fillStyle = '#ffd27d';

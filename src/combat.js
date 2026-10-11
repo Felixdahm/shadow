@@ -44,14 +44,39 @@ function pruefeTreffer(angreifer, ziel, ereignisse) {
 
   angreifer.hatGetroffen = true;
 
+  const K2 = CONFIG.kombo;
   const istSpezial = angreifer.zustand === 'spezial';
   const istWurf = angreifer.zustand === 'wurf';
   // Schattenstoß und Wurf durchbrechen jeden Block
   const blockt = ziel.zustand === 'block' && !istSpezial && !istWurf;
-  const basisSchaden = Math.round((A.schaden + (waffe?.schadenBonus ?? 0)) * angreifer.charakter.schadenFaktor);
+
+  // Spam-Strafe: wer denselben Angriff wiederholt trifft, macht immer weniger Schaden.
+  // Kombos (Schlag → Haken → Tritt) wechseln den Zug und bleiben bei vollem Schaden.
+  if (angreifer.zustand === angreifer.letzterTrefferZug) angreifer.spamZaehler++;
+  else angreifer.spamZaehler = 0;
+  angreifer.letzterTrefferZug = angreifer.zustand;
+  const spamFaktor = Math.max(K2.spamMinimum, 1 - K2.spamAbzug * angreifer.spamZaehler);
+
+  // Finisher: der 3. Schlag einer Kette haut deutlich härter rein
+  const finisher = !istSpezial && !istWurf && angreifer.kombo >= K2.maxKette - 1;
+
+  let basisSchaden = (A.schaden + (waffe?.schadenBonus ?? 0)) * angreifer.charakter.schadenFaktor * spamFaktor;
+  if (finisher) basisSchaden *= K2.finisherSchaden;
+  basisSchaden = Math.round(basisSchaden);
+
   const schaden = blockt ? Math.max(1, Math.round(basisSchaden * CONFIG.treffer.blockSchadenFaktor)) : basisSchaden;
   ziel.hp = Math.max(0, ziel.hp - schaden);
-  ziel.rueckstoss = angreifer.blick * A.rueckstoss * (blockt ? CONFIG.treffer.blockRueckstossFaktor : 1);
+  ziel.rueckstoss = angreifer.blick * A.rueckstoss
+    * (blockt ? CONFIG.treffer.blockRueckstossFaktor : 1)
+    * (finisher ? K2.finisherRueckstoss : 1);
+
+  // Treffer-Serie fürs UI: Angreifer zählt hoch, wer getroffen wird, verliert seine Serie
+  if (!blockt) {
+    angreifer.trefferSerie.anzahl++;
+    angreifer.trefferSerie.timer = K2.serienFenster;
+    ziel.trefferSerie.anzahl = 0;
+    ziel.trefferSerie.timer = 0;
+  }
 
   // Energie: Austeilen lädt die eigene Leiste, Einstecken die des Ziels
   const S = CONFIG.spezial;
@@ -74,5 +99,6 @@ function pruefeTreffer(angreifer, ziel, ereignisse) {
     ko,
     spezial: istSpezial,
     wurf: istWurf,
+    finisher,
   });
 }
