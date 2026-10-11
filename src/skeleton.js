@@ -1,12 +1,22 @@
 import { CONFIG } from './config.js';
 
-// Dunklere Variante einer Hex-Farbe (für hintere Gliedmaßen → Tiefe)
-function dunkler(hex, faktor) {
-  const r = Math.round(parseInt(hex.slice(1, 3), 16) * faktor);
-  const g = Math.round(parseInt(hex.slice(3, 5), 16) * faktor);
-  const b = Math.round(parseInt(hex.slice(5, 7), 16) * faktor);
-  return `rgb(${r}, ${g}, ${b})`;
+// Farbe heller/dunkler machen — versteht '#rrggbb' UND 'rgb(r, g, b)'
+function toene(farbe, faktor) {
+  let r;
+  let g;
+  let b;
+  if (farbe.startsWith('#')) {
+    r = parseInt(farbe.slice(1, 3), 16);
+    g = parseInt(farbe.slice(3, 5), 16);
+    b = parseInt(farbe.slice(5, 7), 16);
+  } else {
+    [r, g, b] = farbe.match(/\d+/g).map(Number);
+  }
+  const f = (w) => Math.min(255, Math.round(w * faktor));
+  return `rgb(${f(r)}, ${f(g)}, ${f(b)})`;
 }
+
+const dunkler = toene;
 
 // Klingen-/Holzfarben der Waffen
 const WAFFEN_FARBEN = {
@@ -45,11 +55,15 @@ export function zeichneSkelett(ctx, x, fussY, blick, pose, optionen = {}) {
     ctx.stroke();
   };
 
-  // Gliedmaße mit Tiefe: dunkle Kontur unter der eigentlichen Farbe —
-  // das gibt den Armen und Beinen Körper statt Strich-Optik.
+  // Gliedmaße im gemalten Look: dunkle Kontur, Grundfarbe und eine
+  // Licht-Kante oben — wie ein Pinselstrich mit Licht von oben.
   const glied = (ax, ay, bx, by, breite, farbe) => {
     knochen(ax, ay, bx, by, breite + 3.5, einfaerbung ?? 'rgba(8, 6, 14, 0.6)');
     knochen(ax, ay, bx, by, breite, farbe);
+    if (!einfaerbung) {
+      const licht = breite * 0.26 * sk;
+      knochen(ax, ay - licht, bx, by - licht, breite * 0.38, toene(farbe, 1.35));
+    }
   };
 
   const kreis = (cx, cy, r, farbe) => {
@@ -127,7 +141,19 @@ export function zeichneSkelett(ctx, x, fussY, blick, pose, optionen = {}) {
   const qy = tx / tl;
   const schulterBreite = s.linienBreite * 1.05 * sk;
   const hueftBreite = s.linienBreite * 0.78 * sk;
-  ctx.fillStyle = F.oben;
+  // Gemalter Rumpf: Verlauf von Licht (vorn-oben) nach Schatten (hinten-unten)
+  if (einfaerbung) {
+    ctx.fillStyle = einfaerbung;
+  } else {
+    const verlauf = ctx.createLinearGradient(
+      sx + qx * schulterBreite, sy + qy * schulterBreite,
+      hx - qx * hueftBreite, hy - qy * hueftBreite,
+    );
+    verlauf.addColorStop(0, toene(F.oben, 1.3));
+    verlauf.addColorStop(0.45, F.oben);
+    verlauf.addColorStop(1, toene(F.oben, 0.6));
+    ctx.fillStyle = verlauf;
+  }
   ctx.beginPath();
   ctx.moveTo(sx + qx * schulterBreite, sy + qy * schulterBreite);
   ctx.lineTo(sx - qx * schulterBreite, sy - qy * schulterBreite);
@@ -137,6 +163,25 @@ export function zeichneSkelett(ctx, x, fussY, blick, pose, optionen = {}) {
   ctx.fill();
   kreis(sx, sy, schulterBreite, F.oben);  // runde Schulterpartie
   kreis(hx, hy, hueftBreite, F.unten);    // Becken in Hosenfarbe
+
+  // Gi-Rock: ein Stofflappen am Gürtel, der mit der Beinbewegung mitschwingt —
+  // macht aus dem Körper sichtbar Kleidung statt Geometrie
+  if (!einfaerbung) {
+    const schwung = (pose.vHuefte + pose.hHuefte) * 0.3; // folgt den Beinen
+    const laenge = 24 * sk;
+    const obenB = hueftBreite * 1.5;
+    const untenB = hueftBreite * 1.1;
+    const ux = hx + Math.sin(schwung) * laenge * blick;
+    const uy = hy + Math.cos(schwung) * laenge;
+    ctx.fillStyle = toene(F.oben, 0.8);
+    ctx.beginPath();
+    ctx.moveTo(hx - obenB, hy);
+    ctx.lineTo(hx + obenB, hy);
+    ctx.lineTo(ux + untenB, uy);
+    ctx.lineTo(ux - untenB, uy);
+    ctx.closePath();
+    ctx.fill();
+  }
   // Gürtel an der Hüfte
   knochen(hx - qx * hueftBreite * 1.15, hy - qy * hueftBreite * 1.15, hx + qx * hueftBreite * 1.15, hy + qy * hueftBreite * 1.15, 4.5, F.akzent);
 
