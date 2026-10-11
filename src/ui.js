@@ -2,7 +2,7 @@ import { CONFIG } from './config.js';
 import { zeichneSkelett } from './skeleton.js';
 import { poseZumZeitpunkt } from './animations.js';
 import { TOUCH_BUTTONS, istGedrueckt, stickZustand, istTouchAktiv } from './input.js';
-import { PORTRAITS, WAFFEN_BILDER, KOEPFE, zeichnePortrait } from './bilder.js';
+import { PORTRAITS, WAFFEN_BILDER, KOEPFE, TEXTUREN, zeichnePortrait } from './bilder.js';
 
 // Tipp-Bereich des MENÜ-/KARTE-Knopfs oben in der Mitte; main.js prüft Taps dagegen
 export const MENUE_KNOPF = { x: 415, y: 50, b: 130, h: 36 };
@@ -467,6 +467,7 @@ export function zeichneAusruestung(ctx, daten) {
     farben: { haut: '#e8b48a', oben: '#2c3a5e', unten: '#1f2a45', akzent: '#c43b3b', haar: '#222b3f' },
     kopfBild: KOEPFE.juro,
     details: 'juro',
+    textur: TEXTUREN.juro,
   });
 
   const reihe = (y, label, eintrag, aktiv) => {
@@ -598,6 +599,7 @@ export function zeichneGegnerWahl(ctx, charakter, zeit, portraitId) {
     farben: charakter.farben,
     kopfBild: KOEPFE[portraitId] ?? null,
     details: portraitId,
+    textur: TEXTUREN[portraitId] ?? null,
   });
 
   ctx.fillStyle = '#F5B452';

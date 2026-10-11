@@ -3,7 +3,7 @@ import { poseZumZeitpunkt, mischePosen, weich, sprungPose } from './animations.j
 import { zeichneSkelett } from './skeleton.js';
 import { spieleSchwung, spieleSpezialStart, spieleTeleport } from './sound.js';
 import { spawnSchattenWolke, spawnStaub } from './particles.js';
-import { KOEPFE } from './bilder.js';
+import { KOEPFE, TEXTUREN } from './bilder.js';
 
 export class Kaempfer {
   constructor(charakter, x, blick) {
@@ -385,6 +385,7 @@ export class Kaempfer {
       farben: this.charakter.farben ?? null,
       kopfBild: KOEPFE[this.name.toLowerCase()] ?? null,
       details: this.name.toLowerCase(),
+      textur: TEXTUREN[this.name.toLowerCase()] ?? null,
     });
 
     if (dreht) ctx.restore();

@@ -53,6 +53,24 @@ export const KOEPFE = {
   umbra: ladeFreigestellt('assets/teile/umbra-kopf.png', true),
 };
 
+// Gemalte Stoff-Texturen pro Charakter — füllen die Körperformen,
+// damit der Körper aus demselben "gemalten Material" besteht wie der Kopf.
+export const TEXTUREN = {
+  juro: ladeBild('assets/teile/juro-stoff.png'),
+  scharr: ladeBild('assets/teile/scharr-stoff.png'),
+  veyra: ladeBild('assets/teile/veyra-stoff.png'),
+  lith: ladeBild('assets/teile/lith-stoff.png'),
+  dorn: ladeBild('assets/teile/dorn-stoff.png'),
+  umbra: ladeBild('assets/teile/umbra-stoff.png'),
+};
+
+// Canvas-Muster aus einer Textur (wird pro Textur einmal erzeugt und gecacht)
+export function holeMuster(ctx, eintrag) {
+  if (!eintrag?.bereit) return null;
+  if (!eintrag.muster) eintrag.muster = ctx.createPattern(eintrag.img, 'repeat');
+  return eintrag.muster;
+}
+
 export const WAFFEN_BILDER = {
   schwert: ladeBild('assets/ui/waffe-schwert.png'),
   dolch: ladeBild('assets/ui/waffe-dolch.png'),

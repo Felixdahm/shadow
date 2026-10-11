@@ -1,7 +1,7 @@
 // Service Worker: speichert das komplette Spiel im Browser-Cache,
 // damit es installiert und offline gespielt werden kann.
 // Bei Änderungen die Versionsnummer erhöhen — dann wird neu gecacht.
-const CACHE = 'schattenpfad-v9';
+const CACHE = 'schattenpfad-v10';
 
 const KERN = [
   './',
@@ -52,6 +52,12 @@ const KERN = [
   './assets/teile/lith-kopf.png',
   './assets/teile/dorn-kopf.png',
   './assets/teile/umbra-kopf.png',
+  './assets/teile/juro-stoff.png',
+  './assets/teile/scharr-stoff.png',
+  './assets/teile/veyra-stoff.png',
+  './assets/teile/lith-stoff.png',
+  './assets/teile/dorn-stoff.png',
+  './assets/teile/umbra-stoff.png',
 ];
 
 self.addEventListener('install', (ev) => {

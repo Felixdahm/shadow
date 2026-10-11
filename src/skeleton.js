@@ -1,4 +1,5 @@
 import { CONFIG } from './config.js';
+import { holeMuster } from './bilder.js';
 
 // Farbe heller/dunkler machen — versteht '#rrggbb' UND 'rgb(r, g, b)'
 function toene(farbe, faktor) {
@@ -33,7 +34,7 @@ const WAFFEN_FARBEN = {
 // optionen: { einfaerbung, skalierung, waffe, extras, farben }
 // farben = { haut, oben, unten, akzent, haar? }
 export function zeichneSkelett(ctx, x, fussY, blick, pose, optionen = {}) {
-  const { einfaerbung = null, skalierung = 1, waffe = null, extras = [], farben = null, kopfBild = null, details = null } = optionen;
+  const { einfaerbung = null, skalierung = 1, waffe = null, extras = [], farben = null, kopfBild = null, details = null, textur = null } = optionen;
   const s = CONFIG.skelett;
   const sk = skalierung;
   const hx = x;
@@ -55,11 +56,27 @@ export function zeichneSkelett(ctx, x, fussY, blick, pose, optionen = {}) {
     ctx.stroke();
   };
 
-  // Gliedmaße im gemalten Look: dunkle Kontur, Grundfarbe und eine
-  // Licht-Kante oben — wie ein Pinselstrich mit Licht von oben.
+  // Gliedmaße im gemalten Look: dunkle Kontur, gemalte Stoff-Textur (falls
+  // geladen) mit Farb-Tönung darüber, dann eine Licht-Kante — wie ein
+  // Pinselstrich mit Licht von oben.
+  const muster = einfaerbung ? null : holeMuster(ctx, textur);
+  const rgba = (farbe, alpha) => {
+    const [r, g, b] = (farbe.startsWith('#')
+      ? [parseInt(farbe.slice(1, 3), 16), parseInt(farbe.slice(3, 5), 16), parseInt(farbe.slice(5, 7), 16)]
+      : farbe.match(/\d+/g).map(Number));
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  };
+
   const glied = (ax, ay, bx, by, breite, farbe) => {
     knochen(ax, ay, bx, by, breite + 3.5, einfaerbung ?? 'rgba(8, 6, 14, 0.6)');
-    knochen(ax, ay, bx, by, breite, farbe);
+    if (muster) {
+      // Muster am Gliedmaßen-Anfang verankern, damit die Textur mitläuft
+      muster.setTransform(new DOMMatrix().translateSelf(ax, ay).scaleSelf(0.07 * sk));
+      knochen(ax, ay, bx, by, breite, muster);
+      knochen(ax, ay, bx, by, breite, rgba(farbe, 0.4)); // Farb-Tönung
+    } else {
+      knochen(ax, ay, bx, by, breite, farbe);
+    }
     if (!einfaerbung) {
       const licht = breite * 0.26 * sk;
       knochen(ax, ay - licht, bx, by - licht, breite * 0.38, toene(farbe, 1.35));
@@ -209,26 +226,37 @@ export function zeichneSkelett(ctx, x, fussY, blick, pose, optionen = {}) {
   const qy = tx / tl;
   const schulterBreite = s.linienBreite * 1.05 * sk;
   const hueftBreite = s.linienBreite * 0.78 * sk;
-  // Gemalter Rumpf: Verlauf von Licht (vorn-oben) nach Schatten (hinten-unten)
+  // Gemalter Rumpf: Stoff-Textur (falls geladen) + Verlauf von Licht nach Schatten
+  const rumpfPfad = () => {
+    ctx.beginPath();
+    ctx.moveTo(sx + qx * schulterBreite, sy + qy * schulterBreite);
+    ctx.lineTo(sx - qx * schulterBreite, sy - qy * schulterBreite);
+    ctx.lineTo(hx - qx * hueftBreite, hy - qy * hueftBreite);
+    ctx.lineTo(hx + qx * hueftBreite, hy + qy * hueftBreite);
+    ctx.closePath();
+  };
   if (einfaerbung) {
     ctx.fillStyle = einfaerbung;
+    rumpfPfad();
+    ctx.fill();
   } else {
+    if (muster) {
+      muster.setTransform(new DOMMatrix().translateSelf(hx, hy).scaleSelf(0.09 * sk));
+      ctx.fillStyle = muster;
+      rumpfPfad();
+      ctx.fill();
+    }
     const verlauf = ctx.createLinearGradient(
       sx + qx * schulterBreite, sy + qy * schulterBreite,
       hx - qx * hueftBreite, hy - qy * hueftBreite,
     );
-    verlauf.addColorStop(0, toene(F.oben, 1.3));
-    verlauf.addColorStop(0.45, F.oben);
-    verlauf.addColorStop(1, toene(F.oben, 0.6));
+    verlauf.addColorStop(0, rgba(toene(F.oben, 1.3), muster ? 0.45 : 1));
+    verlauf.addColorStop(0.45, rgba(F.oben, muster ? 0.4 : 1));
+    verlauf.addColorStop(1, rgba(toene(F.oben, 0.6), muster ? 0.55 : 1));
     ctx.fillStyle = verlauf;
+    rumpfPfad();
+    ctx.fill();
   }
-  ctx.beginPath();
-  ctx.moveTo(sx + qx * schulterBreite, sy + qy * schulterBreite);
-  ctx.lineTo(sx - qx * schulterBreite, sy - qy * schulterBreite);
-  ctx.lineTo(hx - qx * hueftBreite, hy - qy * hueftBreite);
-  ctx.lineTo(hx + qx * hueftBreite, hy + qy * hueftBreite);
-  ctx.closePath();
-  ctx.fill();
   kreis(sx, sy, schulterBreite, F.oben);  // runde Schulterpartie
   kreis(hx, hy, hueftBreite, F.unten);    // Becken in Hosenfarbe
 
