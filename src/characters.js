@@ -16,6 +16,7 @@ export const CHARAKTERE = {
     waffe: 'schwert',
     extras: ['stirnband'],
     kiStil: null, // wird vom Spieler gesteuert
+    spezial: 'stoss',   // Schattenstoß: Dash-Durchstoß
   },
   scharr: {
     farben: { haut: '#c99b6e', oben: '#6b5a48', unten: '#4a3f33', akzent: '#8a7a64' },
@@ -28,6 +29,7 @@ export const CHARAKTERE = {
     extras: [],
     kiStil: 'ausgewogen',
     arena: 'aschenpass',
+    spezial: 'beben',   // Erdbeben: trifft BEIDE Seiten, streckt nieder
     beschreibung: 'Wächter des Aschenpasses · unbewaffnet · ausgewogen',
   },
   veyra: {
@@ -41,6 +43,7 @@ export const CHARAKTERE = {
     extras: ['zopf'],
     kiStil: 'aggressiv',
     arena: 'mondhain',
+    spezial: 'wirbel',  // Wirbelsturm: Riesen-Reichweite, schleudert hoch
     beschreibung: 'Stabkämpferin des Mondhains · schnell, aber zerbrechlich',
   },
   lith: {
@@ -54,6 +57,7 @@ export const CHARAKTERE = {
     extras: ['irokese'],
     kiStil: 'wild',
     arena: 'glutschmiede',
+    spezial: 'tanz',    // Klingentanz: Dash DURCH den Gegner
     beschreibung: 'Messertänzer der Glutschmiede · rastlos, wild, kaum zu fassen',
   },
   dorn: {
@@ -67,6 +71,7 @@ export const CHARAKTERE = {
     extras: ['kapuze'],
     kiStil: 'defensiv',
     arena: 'nebelschlucht',
+    spezial: 'sturz',   // Bergsturz: langsam, brutal, streckt nieder
     beschreibung: 'Herr der Nebelschlucht · langsam, blockt viel, trifft brutal',
   },
   umbra: {
@@ -80,6 +85,7 @@ export const CHARAKTERE = {
     extras: ['stirnband'], // Juros Spiegelbild — gleiche Silhouette, anderes Wesen
     kiStil: 'boss',
     arena: 'leere',
+    spezial: 'stoss',   // wie Juro — er ist sein Schatten
     boss: true, // eigene Mechanik: Schattenschritt (Teleport) + Wut-Phase unter 50 % HP
     beschreibung: 'Juros eigener Schatten · Endboss · erscheint, wo du nicht hinsiehst',
   },

@@ -1,5 +1,5 @@
 import { CONFIG } from './config.js';
-import { poseZumZeitpunkt, mischePosen, weich, sprungPose } from './animations.js';
+import { poseZumZeitpunkt, mischePosen, weich, sprungPose, ANIMATIONEN } from './animations.js';
 import { zeichneSkelett } from './skeleton.js';
 import { spieleSchwung, spieleSpezialStart, spieleTeleport } from './sound.js';
 import { spawnSchattenWolke, spawnStaub } from './particles.js';
@@ -12,6 +12,9 @@ export class Kaempfer {
     this.skalierung = charakter.skalierung;
     this.maxHp = Math.round(CONFIG.kaempfer.maxHp * charakter.hpFaktor);
     this.waffenDaten = charakter.waffe ? CONFIG.waffen[charakter.waffe] : null;
+    // Jeder Charakter hat seinen eigenen Spezialangriff (Stoß, Beben, Wirbel …)
+    this.spezialArt = charakter.spezial ?? 'stoss';
+    this.spezialDaten = CONFIG.spezialArten[this.spezialArt];
     // Manche Waffen (Dolch) machen den Träger schneller
     this.tempo = CONFIG.kaempfer.laufTempo * charakter.tempoFaktor * (1 + (this.waffenDaten?.tempoBonus ?? 0));
 
@@ -57,7 +60,12 @@ export class Kaempfer {
 
   // Boden-Angriffe (der Flugkick hat einen eigenen Zweig, weil Schwerkraft wirkt)
   istAngriff() {
-    return this.zustand !== 'luftTritt' && CONFIG.angriffe[this.zustand] !== undefined;
+    return this.zustand === 'spezial' || (this.zustand !== 'luftTritt' && CONFIG.angriffe[this.zustand] !== undefined);
+  }
+
+  // Werte des laufenden Angriffs — der Spezial hat pro Charakter eigene
+  angriffsDaten() {
+    return this.zustand === 'spezial' ? this.spezialDaten : CONFIG.angriffe[this.zustand];
   }
 
   // Grund-Schlag hängt von der Waffe ab: Faust, Schwert-Hieb, Stab-Feger, Dolch-Stich
@@ -144,12 +152,12 @@ export class Kaempfer {
     }
 
     if (this.istAngriff()) {
-      const A = CONFIG.angriffe[this.zustand];
+      const A = this.angriffsDaten();
 
       if (this.zustand === 'spezial') {
-        // Der Schattenstoß trägt den Kämpfer mit einem Dash nach vorn
-        const dash = this.zustandZeit > 0.12 && this.zustandZeit < A.aktivBis;
-        this.vx = dash ? this.blick * CONFIG.spezial.dashTempo : 0;
+        // Manche Spezials (Stoß, Klingentanz) tragen den Kämpfer mit einem Dash
+        const dash = A.dash && this.zustandZeit > 0.12 && this.zustandZeit < A.aktivBis;
+        this.vx = dash ? this.blick * A.dash : 0;
       } else if (this.zustand === 'wurf') {
         this.vx = 0;
       } else {
@@ -348,10 +356,19 @@ export class Kaempfer {
         : Math.min(1, (this.zustandZeit - halb) / halb);
     }
 
-    // Im Sprung folgt die Pose der Flugbahn, sonst der Keyframe-Animation
-    let pose = this.zustand === 'springen'
-      ? sprungPose(this.vy)
-      : poseZumZeitpunkt(this.zustand, this.zustandZeit);
+    // Im Sprung folgt die Pose der Flugbahn, sonst der Keyframe-Animation.
+    // Angriffs-Animationen strecken sich automatisch auf die Dauer aus der
+    // Konfiguration — so bleiben Keyframes und Treffer-Fenster synchron.
+    let pose;
+    if (this.zustand === 'springen') {
+      pose = sprungPose(this.vy);
+    } else {
+      const animName = this.zustand === 'spezial' ? `spezial_${this.spezialArt}` : this.zustand;
+      let animZeit = this.zustandZeit;
+      const A = this.istAngriff() || this.zustand === 'luftTritt' ? this.angriffsDaten() ?? CONFIG.angriffe[this.zustand] : null;
+      if (A && ANIMATIONEN[animName]) animZeit = this.zustandZeit * (ANIMATIONEN[animName].dauer / A.dauer);
+      pose = poseZumZeitpunkt(animName, animZeit);
+    }
 
     // Weiche Überblendung vom letzten Zustand in den neuen
     const D = CONFIG.animation.uebergangsDauer;
@@ -398,7 +415,7 @@ export class Kaempfer {
   // macht auf dem kleinen Handy-Bildschirm sofort lesbar, DASS und WO
   // gerade ein Angriff durchschwingt.
   zeichneSchwungSpur(ctx) {
-    const A = CONFIG.angriffe[this.zustand];
+    const A = this.istAngriff() ? this.angriffsDaten() : null;
     if (!A || this.zustand === 'wurf') return;
     const von = A.aktivVon - 0.05;
     const bis = A.aktivBis + 0.05;

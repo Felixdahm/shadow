@@ -225,12 +225,43 @@ export const ANIMATIONEN = {
   wurf: { dauer: 0.55, loop: false, frames: [
     { t: 0, pose: STAND }, { t: 0.18, pose: WURF_GREIFEN, art: 'weich' }, { t: 0.3, pose: WURF_SCHLEUDERN, art: 'zack' }, { t: 0.55, pose: STAND, art: 'weich' },
   ] },
-  spezial: { dauer: 0.6, loop: false, frames: [
+  // Charakter-eigene Spezialangriffe (die Zeiten strecken sich automatisch
+  // auf die Dauer aus CONFIG.spezialArten — siehe fighter.zeichne)
+  spezial_stoss: { dauer: 0.6, loop: false, frames: [
     { t: 0, pose: STAND },
     { t: 0.14, pose: SPEZIAL_SAMMELN, art: 'weich' },
     { t: 0.28, pose: SPEZIAL_STOSS, art: 'zack' },
     { t: 0.42, pose: SPEZIAL_DURCHZUG, art: 'weich' },
     { t: 0.6, pose: STAND, art: 'weich' },
+  ] },
+  spezial_beben: { dauer: 0.85, loop: false, frames: [
+    { t: 0, pose: STAND },
+    { t: 0.3, pose: p({ vSchulter: 3.1, hSchulter: 2.9, vEllbogen: -0.3, hEllbogen: -0.3, rumpf: -0.2, hueftFaktor: 1 }), art: 'weich' },
+    { t: 0.42, pose: p({ vSchulter: 0.4, hSchulter: 0.2, vEllbogen: 0.3, hEllbogen: 0.3, rumpf: 0.55, kopf: -0.2, hueftFaktor: 0.5, vHuefte: 1.0, vKnie: 1.8, hHuefte: 0.5, hKnie: 1.4 }), art: 'zack' },
+    { t: 0.6, pose: p({ vSchulter: 0.4, hSchulter: 0.2, rumpf: 0.5, hueftFaktor: 0.55, vHuefte: 1.0, vKnie: 1.8 }), art: 'weich' },
+    { t: 0.85, pose: STAND, art: 'weich' },
+  ] },
+  spezial_wirbel: { dauer: 0.8, loop: false, frames: [
+    { t: 0, pose: STAND },
+    { t: 0.22, pose: STAB_AUSHOLEN, art: 'weich' },
+    { t: 0.34, pose: STAB_TREFFEN, art: 'zack' },
+    { t: 0.48, pose: STAB_DURCHZUG, art: 'zack' },
+    { t: 0.62, pose: p({ vSchulter: 2.6, vEllbogen: 0.1, rumpf: -0.1, hueftFaktor: 0.92 }), art: 'weich' },
+    { t: 0.8, pose: STAND, art: 'weich' },
+  ] },
+  spezial_tanz: { dauer: 0.6, loop: false, frames: [
+    { t: 0, pose: STAND },
+    { t: 0.12, pose: SPEZIAL_SAMMELN, art: 'weich' },
+    { t: 0.22, pose: p({ vSchulter: 1.5, vEllbogen: 0.05, hSchulter: -0.6, rumpf: 0.55, kopf: -0.15, hueftFaktor: 0.72, vHuefte: 1.1, hHuefte: -1.0, hKnie: 0.1 }), art: 'zack' },
+    { t: 0.44, pose: p({ vSchulter: 1.6, vEllbogen: 0.1, hSchulter: -0.65, rumpf: 0.58, hueftFaktor: 0.7, vHuefte: 1.15, hHuefte: -1.05 }), art: 'weich' },
+    { t: 0.6, pose: STAND, art: 'weich' },
+  ] },
+  spezial_sturz: { dauer: 1.0, loop: false, frames: [
+    { t: 0, pose: STAND },
+    { t: 0.4, pose: HIEB_AUSHOLEN, art: 'weich' },
+    { t: 0.55, pose: HIEB_TREFFEN, art: 'zack' },
+    { t: 0.7, pose: p({ vSchulter: 0.6, vEllbogen: 0.2, rumpf: 0.5, kopf: -0.15, hueftFaktor: 0.7, vHuefte: 0.8, vKnie: 1.0 }), art: 'weich' },
+    { t: 1.0, pose: STAND, art: 'weich' },
   ] },
   // Schattenschritt des Endbosses: kurz sammeln, verschwinden, wieder auftauchen
   schatten: { dauer: 0.4, loop: false, frames: [

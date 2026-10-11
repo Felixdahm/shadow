@@ -10,7 +10,8 @@ export function verarbeiteKampf(a, b) {
 }
 
 function pruefeTreffer(angreifer, ziel, ereignisse) {
-  const A = CONFIG.angriffe[angreifer.zustand];
+  // Der Spezial hat pro Charakter eigene Werte
+  const A = angreifer.zustand === 'spezial' ? angreifer.spezialDaten : CONFIG.angriffe[angreifer.zustand];
   if (!A) return; // kein Angriffs-Zustand
   // Nur im aktiven Fenster des Angriffs kann getroffen werden, und nur einmal
   if (angreifer.hatGetroffen) return;
@@ -18,6 +19,9 @@ function pruefeTreffer(angreifer, ziel, ereignisse) {
   if (!ziel.lebt()) return;
   // Während des Schattenschritts ist der Boss unverwundbar
   if (ziel.zustand === 'schatten') return;
+  // Echte Ausweich-Frames: Während des Kernstücks der Rolle ist man unverwundbar —
+  // gut getimtes Rollen lässt JEDEN Angriff durchgehen
+  if (ziel.zustand === 'rolle' && ziel.zustandZeit > 0.05 && ziel.zustandZeit < 0.35) return;
   // Werfen kann man nur jemanden, der am Boden steht
   if (angreifer.zustand === 'wurf' && !ziel.amBoden()) return;
 
@@ -38,7 +42,10 @@ function pruefeTreffer(angreifer, ziel, ereignisse) {
   const zielLinks = ziel.x - K.koerperBreite / 2;
   const zielRechts = ziel.x + K.koerperBreite / 2;
 
-  const trifftX = Math.min(vorderkante, spitze) <= zielRechts && Math.max(vorderkante, spitze) >= zielLinks;
+  // Flächen-Angriffe (Scharrs Erdbeben) treffen auf BEIDEN Seiten
+  const trifftX = A.aoe
+    ? Math.abs(ziel.x - angreifer.x) <= reichweite + K.koerperBreite / 2
+    : Math.min(vorderkante, spitze) <= zielRechts && Math.max(vorderkante, spitze) >= zielLinks;
   const trifftY = hitY >= ziel.y - hoehe && hitY <= ziel.y + 5;
   if (!trifftX || !trifftY) return;
 
