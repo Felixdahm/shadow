@@ -80,8 +80,11 @@ export function kiEingabe(ich, gegner, dt) {
     // sonst: kurz stehen bleiben (wirkt menschlicher)
   } else {
     if (wuerfel < stil.angriffsLust) {
-      // Bewaffnete schlagen lieber (mehr Reichweite), Unbewaffnete treten öfter
-      if (Math.random() < (ich.waffenDaten ? 0.65 : 0.5)) e.schlag = true;
+      // Gegen still Stehende (= Auto-Block) tiefe Angriffe oder Würfe wählen
+      if (gegner.zustand === 'stehen' && Math.random() < 0.45) {
+        if (Math.random() < 0.6) { e.tritt = true; e.ducken = true; } // Fegetritt unterläuft den Block
+        else e.schlag = true; // nah dran wird daraus automatisch der Wurf
+      } else if (Math.random() < (ich.waffenDaten ? 0.65 : 0.5)) e.schlag = true;
       else e.tritt = true;
       // Ab und zu Richtungs-Attacken: Sturmstoß, Uppercut oder Fegetritt
       const extra = Math.random();

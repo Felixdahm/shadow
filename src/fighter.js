@@ -102,7 +102,8 @@ export class Kaempfer {
     this.hp = this.maxHp;
     this.anzeigeHp = this.hp;
     this.rueckstoss = 0;
-    this.energie = 0;
+    // Energie bleibt über die Runden erhalten — den Spezial für Runde 2
+    // aufzusparen ist eine echte taktische Entscheidung (wie in Shadow Fight 3)
     this.aktionsPuffer = null;
     this.letzterTrefferZug = null;
     this.spamZaehler = 0;

@@ -57,8 +57,14 @@ function pruefeTreffer(angreifer, ziel, ereignisse) {
   const K2 = CONFIG.kombo;
   const istSpezial = angreifer.zustand === 'spezial';
   const istWurf = angreifer.zustand === 'wurf';
-  // Schattenstoß und Wurf durchbrechen jeden Block
-  const blockt = ziel.zustand === 'block' && !istSpezial && !istWurf;
+
+  // Blocken wie in Shadow Fight — Schere-Stein-Papier:
+  //  · Wer still STEHT, blockt automatisch (hohe und mittlere Angriffe)
+  //  · TIEFE Angriffe (Fegetritt & Co.) unterlaufen den Stand-Block …
+  //  · … werden aber vom EXPLIZITEN Block (D) abgefangen
+  //  · WURF und SPEZIAL durchbrechen jeden Block
+  const standBlock = ziel.zustand === 'stehen' && ziel.amBoden() && !A.niederschlag;
+  const blockt = !istSpezial && !istWurf && (ziel.zustand === 'block' || standBlock);
 
   // Spam-Strafe: wer denselben Angriff wiederholt trifft, macht immer weniger Schaden.
   // Kombos (Schlag → Haken → Tritt) wechseln den Zug und bleiben bei vollem Schaden.
@@ -70,8 +76,12 @@ function pruefeTreffer(angreifer, ziel, ereignisse) {
   // Finisher: der 3. Schlag einer Kette haut deutlich härter rein
   const finisher = !istSpezial && !istWurf && angreifer.kombo >= K2.maxKette - 1;
 
+  // Kopftreffer sind kritisch: Angriffe auf Kopfhöhe lohnen sich
+  const kritisch = !blockt && hitY < ziel.y - hoehe * CONFIG.treffer.kritAbHoehe;
+
   let basisSchaden = A.schaden * angreifer.charakter.schadenFaktor * spamFaktor;
   if (finisher) basisSchaden *= K2.finisherSchaden;
+  if (kritisch) basisSchaden *= CONFIG.treffer.kritFaktor;
   basisSchaden = Math.round(basisSchaden);
 
   const schaden = blockt ? Math.max(1, Math.round(basisSchaden * CONFIG.treffer.blockSchadenFaktor)) : basisSchaden;
@@ -125,7 +135,9 @@ function pruefeTreffer(angreifer, ziel, ereignisse) {
     spezial: istSpezial,
     wurf: istWurf,
     finisher,
+    kritisch,
     serie: angreifer.trefferSerie.anzahl,
     schaden,
+    angreiferName: angreifer.name,
   });
 }

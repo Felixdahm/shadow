@@ -80,6 +80,9 @@ export const CONFIG = {
     blockRueckstossFaktor: 0.4,
     liegenDauer: 0.9,         // so lange liegt man nach einem Niederschlag (unverwundbar)
     sturzAbSerie: 4,          // ab dem 4. Serientreffer geht man automatisch zu Boden — keine Endloskombos
+    kritFaktor: 1.35,         // Treffer auf Kopfhöhe machen kritischen Schaden
+    kritAbHoehe: 0.78,        // ab dieser Körperhöhe (Anteil) zählt ein Treffer als Kopftreffer
+    ersterTrefferEnergie: 12, // Bonus-Energie für den ersten Treffer der Runde
   },
 
   // Ausweichbewegungen: Rolle am Boden (duckt unter Schlägen durch),
@@ -163,6 +166,7 @@ export const CONFIG = {
     gewinneNoetig: 2,    // Best of 3
     introDauer: 1.6,
     rundenEndeDauer: 2.2,
+    zeitLimit: 45,       // Sekunden pro Runde — bei Ablauf gewinnt, wer mehr Leben hat
   },
 
   ki: {

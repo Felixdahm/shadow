@@ -109,6 +109,9 @@ function kampfGeruest(gegnerDaten, gegnerId) {
     trainingModus: 0,
     zeitlupe: 0, // K.O.-Zeitlupe
     blitz: 0,    // kurzer Screen-Flash bei Finisher/Spezial
+    rundenZeit: CONFIG.runden.zeitLimit, // Countdown — bei 0 gewinnt, wer mehr Leben hat
+    zeitAbgelaufen: false,
+    ersterTreffer: false, // der erste Treffer der Runde gibt Bonus-Energie
   };
 }
 
@@ -152,6 +155,9 @@ function naechsteRunde() {
   spiel.gegner.neueRunde(START_X_GEGNER, -1);
   spiel.phase = 'intro';
   spiel.phasenZeit = 0;
+  spiel.rundenZeit = CONFIG.runden.zeitLimit;
+  spiel.zeitAbgelaufen = false;
+  spiel.ersterTreffer = false;
   leerePartikel();
 }
 
@@ -396,6 +402,21 @@ function updateKampf(dt) {
       spieleGong();
     }
   } else if (kampfAktiv) {
+    // Rundentimer: bei Ablauf gewinnt die Runde, wer anteilig mehr Leben hat
+    if (!spiel.training) {
+      spiel.rundenZeit -= dt;
+      if (spiel.rundenZeit <= 0) {
+        const sieger = spieler.hp / spieler.maxHp >= gegner.hp / gegner.maxHp ? spieler : gegner;
+        sieger.rundenSiege++;
+        spiel.rundenSieger = sieger.name;
+        spiel.zeitAbgelaufen = true;
+        spiel.phase = 'rundenEnde';
+        spiel.phasenZeit = 0;
+        spieleGong();
+        return;
+      }
+    }
+
     const ereignisse = verarbeiteKampf(spieler, gegner);
     for (const e of ereignisse) {
       const wuchtig = e.spezial || e.wurf || e.finisher;
@@ -404,12 +425,19 @@ function updateKampf(dt) {
       kamera.shake = Math.max(kamera.shake, e.ko ? G.shakeKo : wuchtig ? 12 : e.blockt ? G.shakeBlock : G.shakeTreffer);
       if (e.ko) kamera.zoom = 1.1;
       else if (wuchtig && !e.blockt) kamera.zoom = 1.06;
-      // Schwebende Schadenszahl über dem Getroffenen
+      // Schwebende Schadenszahl über dem Getroffenen (Kopftreffer = KRIT, gold)
       spawnSchadenText(
-        e.x, e.y - 36, `${e.schaden}`,
-        e.blockt ? '#A99EC2' : wuchtig ? '#F5B452' : '#F2ECFA',
-        wuchtig || e.ko,
+        e.x, e.y - 36, e.kritisch ? `${e.schaden} KRIT` : `${e.schaden}`,
+        e.blockt ? '#A99EC2' : wuchtig || e.kritisch ? '#F5B452' : '#F2ECFA',
+        wuchtig || e.ko || e.kritisch,
       );
+      // Der erste Treffer der Runde gibt Bonus-Energie
+      if (!spiel.ersterTreffer && !e.blockt) {
+        spiel.ersterTreffer = true;
+        const treffender = e.angreiferName === spieler.name ? spieler : gegner;
+        treffender.energie = Math.min(CONFIG.spezial.energieMax, treffender.energie + CONFIG.treffer.ersterTrefferEnergie);
+        spawnSchadenText(e.x, e.y - 70, 'ERSTER TREFFER', '#F5B452', false);
+      }
       if (e.ko) spiel.zeitlupe = 0.9;
       if (wuchtig && !e.blockt) spiel.blitz = 0.12;
       if (e.ko) spieleKo();

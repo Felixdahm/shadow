@@ -104,6 +104,15 @@ export function zeichneUI(ctx, spiel) {
     ctx.fillText(`Welt ${spiel.weltNummer} · Kampf ${spiel.kampfNummer} von ${spiel.kampfAnzahl}`, breite / 2, 42);
   }
 
+  // Rundentimer — wird unter 10 Sekunden rot und drängelt
+  if (!spiel.training && spiel.rundenZeit !== undefined && (spiel.phase === 'kampf' || spiel.phase === 'intro')) {
+    const sek = Math.max(0, Math.ceil(spiel.rundenZeit));
+    ctx.fillStyle = sek <= 10 ? '#E5484D' : 'rgba(242, 236, 250, 0.9)';
+    ctx.font = '700 26px Cinzel, serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${sek}`, breite / 2, 120);
+  }
+
   // Knopf oben Mitte: im Dojo öffnet er das Menü-Panel, im Kampf geht's zur Karte
   {
     const K = MENUE_KNOPF;
@@ -134,7 +143,7 @@ export function zeichneUI(ctx, spiel) {
       ansage(ctx, 'FIGHT!', 76, spiel.phasenZeit - 0.85);
     }
   } else if (spiel.phase === 'rundenEnde') {
-    ansage(ctx, 'K.O.', 84, spiel.phasenZeit);
+    ansage(ctx, spiel.zeitAbgelaufen ? 'ZEIT!' : 'K.O.', 84, spiel.phasenZeit);
     untertitel(ctx, `${spiel.rundenSieger} holt die Runde`);
   } else if (spiel.phase === 'matchEnde') {
     ansage(ctx, `${spiel.matchSieger.toUpperCase()} GEWINNT`, 56, spiel.phasenZeit);
