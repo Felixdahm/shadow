@@ -22,6 +22,8 @@ function pruefeTreffer(angreifer, ziel, ereignisse) {
   // Echte Ausweich-Frames: Während des Kernstücks der Rolle ist man unverwundbar —
   // gut getimtes Rollen lässt JEDEN Angriff durchgehen
   if (ziel.zustand === 'rolle' && ziel.zustandZeit > 0.05 && ziel.zustandZeit < 0.35) return;
+  // Wer am Boden liegt, ist unverwundbar — keine Endloskombos
+  if (ziel.zustand === 'liegen') return;
   // Werfen kann man nur jemanden, der am Boden steht
   if (angreifer.zustand === 'wurf' && !ziel.amBoden()) return;
 
@@ -97,15 +99,19 @@ function pruefeTreffer(angreifer, ziel, ereignisse) {
   if (ko) {
     ziel.wechsle('ko');
   } else if (!blockt) {
-    ziel.wechsle('treffer');
-    // Der Finisher streckt länger nieder — Zeit, um Abstand zu gewinnen oder nachzusetzen
-    if (finisher) ziel.zustandZeit = -0.2;
-    // Fegetritt streckt zusätzlich nieder
-    if (A.niederschlag) ziel.zustandZeit = -0.25;
-    // Uppercut schleudert den Gegner in die Luft (Weiterverfolgung mit Flugkick möglich!)
-    if (A.knockup) {
-      ziel.vy = -A.knockup;
-      ziel.y -= 2;
+    // Zu Boden gehen: bei Finisher, Niederschlag-Angriffen, Wurf — und spätestens
+    // nach dem 4. Serientreffer (harte Grenze gegen Endloskombos)
+    const faellt = finisher || A.niederschlag || istWurf
+      || angreifer.trefferSerie.anzahl >= CONFIG.treffer.sturzAbSerie;
+    if (faellt && ziel.amBoden() && !A.knockup) {
+      ziel.wechsle('liegen');
+    } else {
+      ziel.wechsle('treffer');
+      // Uppercut schleudert den Gegner in die Luft (Weiterverfolgung mit Flugkick!)
+      if (A.knockup) {
+        ziel.vy = -A.knockup;
+        ziel.y -= 2;
+      }
     }
   }
 

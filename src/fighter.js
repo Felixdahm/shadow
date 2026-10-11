@@ -88,6 +88,7 @@ export class Kaempfer {
       spieleSchwung();
     } else {
       this.kombo = 0;
+      if (zustand === 'liegen') spawnStaub(this.x, CONFIG.physik.bodenY);
     }
   }
 
@@ -148,6 +149,14 @@ export class Kaempfer {
     if (this.zustand === 'treffer') {
       this.vx = 0;
       if (this.zustandZeit >= CONFIG.treffer.hitstunDauer) this.wechsle('stehen');
+      return;
+    }
+
+    if (this.zustand === 'liegen') {
+      // Am Boden: unverwundbar (siehe combat.js), rutscht mit dem Rückstoß aus,
+      // steht danach von selbst wieder auf
+      this.vx = 0;
+      if (this.zustandZeit >= CONFIG.treffer.liegenDauer) this.wechsle('stehen');
       return;
     }
 

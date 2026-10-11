@@ -78,6 +78,8 @@ export const CONFIG = {
     hitstunDauer: 0.34,       // so lange ist der Getroffene handlungsunfähig
     blockSchadenFaktor: 0.15, // geblockt kommt nur ein Bruchteil des Schadens durch
     blockRueckstossFaktor: 0.4,
+    liegenDauer: 0.9,         // so lange liegt man nach einem Niederschlag (unverwundbar)
+    sturzAbSerie: 4,          // ab dem 4. Serientreffer geht man automatisch zu Boden — keine Endloskombos
   },
 
   // Ausweichbewegungen: Rolle am Boden (duckt unter Schlägen durch),

@@ -34,6 +34,12 @@ export function kiEingabe(ich, gegner, dt) {
   const gegnerIstRechts = gegner.x > ich.x;
   const wuerfel = Math.random();
 
+  // Fairness: Wer am Boden liegt, wird nicht bedrängt — Abstand nehmen
+  if (gegner.zustand === 'liegen') {
+    if (wuerfel < 0.6) e[gegnerIstRechts ? 'links' : 'rechts'] = true;
+    return e;
+  }
+
   // Reaktion: Wenn der Gegner gerade angreift, blocken — oder wegrollen
   const gegnerGreiftAn = gegner.zustand === 'schlag' || gegner.zustand === 'tritt' || gegner.zustand === 'spezial';
   if (gegnerGreiftAn && abstand < K.angriffsAbstand + 40) {

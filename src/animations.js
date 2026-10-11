@@ -273,6 +273,14 @@ export const ANIMATIONEN = {
     { t: 0.16, pose: TREFFER_FEDERN, art: 'weich' },
     { t: 0.3, pose: STAND, art: 'weich' },
   ] },
+  // Niederschlag: zu Boden gehen, kurz liegen bleiben, wieder hochkommen
+  liegen: { dauer: 0.9, loop: false, frames: [
+    { t: 0, pose: TREFFER_POSE },
+    { t: 0.22, pose: KO_LIEGEN, art: 'zack' },
+    { t: 0.58, pose: KO_LIEGEN },
+    { t: 0.78, pose: KO_KNIEN, art: 'weich' },
+    { t: 0.9, pose: STAND, art: 'weich' },
+  ] },
   ko: { dauer: 0.75, loop: false, frames: [
     { t: 0, pose: TREFFER_POSE },
     { t: 0.3, pose: KO_KNIEN, art: 'weich' },
