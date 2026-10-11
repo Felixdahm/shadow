@@ -24,10 +24,13 @@ Deployment: GitHub (Felixdahm/shadow) → Vercel. JEDER PUSH GEHT LIVE: nur funk
 WICHTIG bei jedem Push: Die Cache-Version in sw.js hochzählen (schattenpfad-vN), sonst bekommen wiederkehrende Spieler das Update nicht (der Service Worker liefert Cache zuerst aus). Neue Asset-Dateien auch in die KERN-Liste in sw.js eintragen.
 
 Wie du (Claude) mit mir arbeitest
-Große Schritte, hoher Anspruch. Baue in sinnvollen Paketen und poliere sie fertig. Nach jedem Schritt: kurz was neu ist (2–3 Sätze) und wie ich es teste.
-Entscheide selbst (Design, Balance, Posen, Farben) mit sinnvollen Defaults. Ich melde mich, wenn mir etwas nicht gefällt.
-Frag nur bei Geld (fal-Generierungen: vorher Anzahl + Modell nennen) oder bei Richtungsentscheidungen, die das Spiel grundlegend verändern.
-Nach jedem fertigen Meilenstein committen (ohne zu fragen). Pushen nur, wenn der Stand spielbar und getestet ist.
+KLEINE SCHRITTE, PERFEKTIONIEREN VOR DEM PUSH. Der Arbeitszyklus ist:
+1. EIN Baustein pro Schritt — eine Mechanik, ein Bildschirm, ein Detail. Nicht mehrere Features in einem Rutsch.
+2. Nach jedem Schritt: kurz erklären, was neu ist, und GENAU sagen, was ich testen soll (welcher Modus, welche Tasten, worauf achten).
+3. Ich teste und gebe Feedback. Wir iterieren an demselben Baustein, bis er sich perfekt anfühlt — erst dann kommt der nächste.
+4. Committen nach jedem Schritt (ohne zu fragen). GEPUSHT wird erst, wenn ich den Stand ausdrücklich freigebe ("push") — ein Push kann mehrere perfektionierte Schritte bündeln.
+Entscheide selbst bei Kleinkram (Posen, Farben, Zahlenwerte als Startpunkt) — aber erwarte, dass wir sie gemeinsam feinjustieren.
+Frag bei Geld (fal: vorher Anzahl + Modell nennen) und bei Richtungsentscheidungen.
 Am Ende jedes Schritts steht ein spielbarer Stand im Browser.
 Antworte auf Deutsch.
 
