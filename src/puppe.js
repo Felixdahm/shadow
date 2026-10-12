@@ -92,8 +92,12 @@ function baueTeile() {
 
 export const PUPPEN = { juro: {} }; // Kompatibilität zur Aufruf-Signatur
 
+// Solange die Puppe nicht perfekt ist, bleibt sie abgeschaltet —
+// das Spiel zeigt die Edel-Silhouette (Workflow: perfektionieren, dann aktivieren)
+const PUPPE_AKTIV = false;
+
 export function puppeBereit(name) {
-  return name === 'juro' && !!baueTeile();
+  return PUPPE_AKTIV && name === 'juro' && !!baueTeile();
 }
 
 export function zeichnePuppe(ctx, x, fussY, blick, pose, _puppe, skalierung = 1) {
