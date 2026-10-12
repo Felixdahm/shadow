@@ -92,9 +92,8 @@ function baueTeile() {
 
 export const PUPPEN = { juro: {} }; // Kompatibilität zur Aufruf-Signatur
 
-// Solange die Puppe nicht perfekt ist, bleibt sie abgeschaltet —
-// das Spiel zeigt die Edel-Silhouette (Workflow: perfektionieren, dann aktivieren)
-const PUPPE_AKTIV = false;
+// Puppe aktiv: der Ninja aus dem Referenzblatt des Spielers
+const PUPPE_AKTIV = true;
 
 export function puppeBereit(name) {
   return PUPPE_AKTIV && name === 'juro' && !!baueTeile();
@@ -114,8 +113,15 @@ export function zeichnePuppe(ctx, x, fussY, blick, pose, _puppe, skalierung = 1)
   const huefte = [0, fussY - s.hueftHoehe * sk * pose.hueftFaktor];
   const schulter = ende(huefte, pose.rumpf, s.rumpfLaenge, true);
   const kopfMitte = ende(schulter, pose.rumpf + pose.kopf, s.halsLaenge + s.kopfRadius, true);
-  const hals = [schulter[0] + (kopfMitte[0] - schulter[0]) * 0.25, schulter[1] + (kopfMitte[1] - schulter[1]) * 0.25];
-  const scheitel = [kopfMitte[0] + (kopfMitte[0] - schulter[0]) * 0.9, kopfMitte[1] + (kopfMitte[1] - schulter[1]) * 0.9];
+  // Kopf-Anker exakt aus den Blender-Proportionen abgeleitet:
+  // Torso = 1.4 Blender-Einheiten ↔ rumpfLaenge Pixel; Hals sitzt 0.12 u über
+  // der Schulter, der Scheitel 1.33 u über dem Hals — so sitzt der Kopf passgenau.
+  const einheit = (s.rumpfLaenge / 1.4) * sk;
+  const dLen = Math.hypot(kopfMitte[0] - schulter[0], kopfMitte[1] - schulter[1]) || 1;
+  const rx = (kopfMitte[0] - schulter[0]) / dLen;
+  const ry = (kopfMitte[1] - schulter[1]) / dLen;
+  const hals = [schulter[0] + rx * 0.12 * einheit, schulter[1] + ry * 0.12 * einheit];
+  const scheitel = [hals[0] + rx * 1.33 * einheit, hals[1] + ry * 1.33 * einheit];
   const elleV = ende(schulter, pose.vSchulter, s.oberarm);
   const handV = ende(elleV, pose.vSchulter + pose.vEllbogen, s.unterarm);
   const elleH = ende(schulter, pose.hSchulter, s.oberarm);
