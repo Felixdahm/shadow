@@ -4,6 +4,7 @@ import { zeichneSkelett } from './skeleton.js';
 import { spieleSchwung, spieleSpezialStart, spieleTeleport } from './sound.js';
 import { spawnSchattenWolke, spawnStaub } from './particles.js';
 import { KOEPFE, TEXTUREN } from './bilder.js';
+import { PUPPEN, puppeBereit, zeichnePuppe } from './puppe.js';
 
 export class Kaempfer {
   constructor(charakter, x, blick) {
@@ -429,17 +430,24 @@ export class Kaempfer {
       ctx.translate(-this.x, -pivotY);
     }
 
-    zeichneSkelett(ctx, this.x, this.y, this.blick, pose, {
-      einfaerbung: flash,
-      skalierung: this.skalierung,
-      waffe: this.charakter.waffe,
-      extras: this.charakter.extras,
-      farben: this.charakter.farben ?? null,
-      kopfBild: KOEPFE[this.name.toLowerCase()] ?? null,
-      details: this.name.toLowerCase(),
-      textur: TEXTUREN[this.name.toLowerCase()] ?? null,
-      silhouette: this.rim ?? null, // Arena-Lichtfarbe → Shadow-Fight-Silhouette
-    });
+    // Puppen-Pilot: Hat der Charakter eine generierte Bild-Puppe, wird sie
+    // ans Skelett gehängt (Hit-Flash fällt auf die Vektor-Figur zurück)
+    const puppenName = this.name.toLowerCase();
+    if (!flash && puppeBereit(puppenName)) {
+      zeichnePuppe(ctx, this.x, this.y, this.blick, pose, PUPPEN[puppenName], this.skalierung);
+    } else {
+      zeichneSkelett(ctx, this.x, this.y, this.blick, pose, {
+        einfaerbung: flash,
+        skalierung: this.skalierung,
+        waffe: this.charakter.waffe,
+        extras: this.charakter.extras,
+        farben: this.charakter.farben ?? null,
+        kopfBild: KOEPFE[puppenName] ?? null,
+        details: puppenName,
+        textur: TEXTUREN[puppenName] ?? null,
+        silhouette: this.rim ?? null, // Arena-Lichtfarbe → Shadow-Fight-Silhouette
+      });
+    }
 
     if (dreht) ctx.restore();
     ctx.globalAlpha = 1;
