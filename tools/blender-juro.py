@@ -105,13 +105,21 @@ def kegel(x, z, r, laenge, mat, neigung=0.0):
     setze(o, mat)
     return o
 
+def stumpf(x, z_oben, r_oben, z_unten, r_unten, mat, sy=0.8):
+    """Konisches Gliedmaßen-Stück: oben dick, zum Gelenk schlank — kein Röhren-Look"""
+    mitte = (z_oben + z_unten) / 2
+    laenge = abs(z_oben - z_unten)
+    bpy.ops.mesh.primitive_cone_add(radius1=r_oben, radius2=r_unten, depth=laenge, location=(x, 0, mitte), vertices=24)
+    o = bpy.context.object
+    o.scale[1] = sy
+    setze(o, mat)
+    return o
+
 # ---------- Teile bauen (jedes in eigener Zelle, Anker = oben/unten) ----------
 TEILE = {}
 
 def anker(name, x, z_oben, z_unten, halbbreite, rand=0.25):
-    """Pixel-Rechteck + Anker für puppe.js berechnen"""
     def px(wx):
-        # Kamera spiegelt X: Welt +X erscheint im Bild links
         return round(512 - wx * PX_PRO_EINHEIT)
     def py(wz):
         return round(512 - wz * PX_PRO_EINHEIT)
@@ -122,51 +130,59 @@ def anker(name, x, z_oben, z_unten, halbbreite, rand=0.25):
         'von': [px(x), py(z_oben)], 'bis': [px(x), py(z_unten)],
     }
 
-# Kopf (mit Haarzacken + Stirnband), Anker: Hals → Scheitel
+# ---- Kopf: Schädel + Kiefer + Ohr + Haarschopf + Stirnband ----
 KX, KZ = -3.4, 2.6
-kugel(KX, KZ + 0.62, 0.52, HAUT, sz=1.1)
-kugel(KX - 0.05, KZ + 0.95, 0.5, HAAR, sz=0.75)       # Haarkappe
-for i, (dx, dz, neig) in enumerate([(-0.4, 1.15, -0.7), (-0.18, 1.35, -0.3), (0.1, 1.4, 0.1), (0.35, 1.3, 0.5)]):
-    kegel(KX + dx, KZ + dz, 0.16, 0.55, HAAR, neigung=neig)
-zylinder(KX, KZ + 0.72, 0.545, 0.14, ROT)             # Stirnband
-kugel(KX + 0.62, KZ + 0.55, 0.1, ROT, sx=2.2, sz=0.5) # Band weht nach hinten (Bild: links)
-anker('kopf', KX, KZ + 1.35, KZ + 0.05, 1.15)
-# Kopf-Anker drehen: von = Hals (unten) → bis = Scheitel (oben)
+kugel(KX, KZ + 0.68, 0.5, HAUT, sx=0.95, sz=1.12)          # Schädel
+kugel(KX - 0.16, KZ + 0.38, 0.3, HAUT, sx=1.05, sz=0.8)    # Kiefer (vorn = Bild rechts)
+kugel(KX + 0.3, KZ + 0.6, 0.09, HAUT, sx=0.5, sz=0.9)      # Ohr
+kugel(KX + 0.12, KZ + 1.02, 0.52, HAAR, sx=0.95, sz=0.72)  # Haarkappe (nach hinten)
+for dx, dz, neig in [(-0.34, 1.32, -0.55), (-0.1, 1.5, -0.2), (0.18, 1.52, 0.25), (0.44, 1.38, 0.65), (0.6, 1.1, 1.0)]:
+    kegel(KX + dx, KZ + dz, 0.15, 0.5, HAAR, neigung=neig)
+zylinder(KX, KZ + 0.76, 0.52, 0.13, ROT, sy=0.8)           # Stirnband
+kugel(KX + 0.66, KZ + 0.62, 0.09, ROT, sx=2.4, sz=0.4)     # Band-Enden wehen nach hinten
+kugel(KX + 0.72, KZ + 0.44, 0.07, ROT, sx=2.0, sz=0.35)
+anker('kopf', KX, KZ + 1.35, KZ + 0.05, 1.2)
 TEILE['kopf']['von'], TEILE['kopf']['bis'] = TEILE['kopf']['bis'], TEILE['kopf']['von']
 
-# Torso mit Mantel (Anker: Schulter → Hüfte; Mantel hängt tiefer)
+# ---- Torso: geformte Brust, Taille, Mantel mit schrägem Saum, Schal, Schulterkappe ----
 TX, TZ = -1.1, 2.9
-quader(TX, TZ - 0.75, 0.52, 0.3, 0.85, JACKE)          # Brustkorb
-quader(TX, TZ - 1.5, 0.42, 0.26, 0.7, JACKE)           # Bauch
-quader(TX, TZ - 1.62, 0.46, 0.28, 0.16, ROT)           # Gürtel
-quader(TX, TZ - 2.2, 0.5, 0.24, 1.1, MANTEL)           # Mantel-Schoß
-kugel(TX, TZ - 0.28, 0.33, ROT, sx=1.3, sy=0.9, sz=0.55)  # Schal
-anker('torso', TX, TZ - 0.3, TZ - 1.7, 0.95, rand=0.45)
+kugel(TX, TZ - 0.55, 0.56, JACKE, sx=1.0, sy=0.55, sz=0.85)   # Brustkorb (geformt)
+stumpf(TX, TZ - 1.0, 0.44, TZ - 1.62, 0.34, JACKE, sy=0.55)   # Taille (verjüngt)
+zylinder(TX, TZ - 1.66, 0.4, 0.16, ROT, sy=0.6)               # Gürtel
+stumpf(TX, TZ - 1.7, 0.42, TZ - 2.5, 0.58, MANTEL, sy=0.5)    # Mantel flared
+k = kugel(TX - 0.05, TZ - 2.52, 0.56, MANTEL, sx=1.0, sy=0.48, sz=0.22)  # Saum-Schwung
+kugel(TX, TZ - 0.18, 0.36, ROT, sx=1.25, sy=0.8, sz=0.5)      # Schal
+kugel(TX - 0.3, TZ - 0.1, 0.16, ROT, sx=0.8, sz=1.4)          # Schal-Knoten vorn
+anker('torso', TX, TZ - 0.3, TZ - 1.7, 1.0, rand=0.5)
 
-# Oberarm (Schulter → Ellbogen)
+# ---- Oberarm: Schulterkappe + konischer Ärmel + Ellbogenbund ----
 AX, AZ = 1.0, 3.0
-kugel(AX, AZ, 0.26, JACKE)
-zylinder(AX, AZ - 0.55, 0.2, 1.1, JACKE)
+kugel(AX, AZ - 0.08, 0.3, JACKE, sz=0.85)                 # Schulterkappe (deckt Ansatz)
+stumpf(AX, AZ - 0.15, 0.24, AZ - 1.05, 0.15, JACKE)       # Ärmel konisch
+zylinder(AX, AZ - 1.02, 0.18, 0.14, MANTEL, sy=0.8)       # Ärmelbund (deckt Ellbogen)
 anker('oberarm', AX, AZ, AZ - 1.1, 0.5)
 
-# Unterarm mit Armschiene + Faust (Ellbogen → Hand)
+# ---- Unterarm: konisch + Armschiene + Faust mit Daumen ----
 UX, UZ = 2.3, 3.0
-zylinder(UX, UZ - 0.4, 0.17, 0.8, JACKE)
-zylinder(UX, UZ - 0.62, 0.19, 0.5, BRAUN)              # Armschiene
-kugel(UX, UZ - 1.0, 0.2, HAUT)                         # Faust
+stumpf(UX, UZ - 0.02, 0.17, UZ - 0.78, 0.12, JACKE)
+stumpf(UX, UZ - 0.42, 0.2, UZ - 0.8, 0.16, BRAUN)          # Armschiene
+kugel(UX, UZ - 0.98, 0.18, HAUT, sz=1.1)                   # Faust
+kugel(UX - 0.14, UZ - 0.92, 0.08, HAUT)                    # Daumen
 anker('unterarm', UX, UZ, UZ - 1.0, 0.45)
 
-# Oberschenkel (Hüfte → Knie)
+# ---- Oberschenkel: konisch, Kniebund ----
 SX, SZ = 1.0, 0.6
-kugel(SX, SZ, 0.26, HOSE)
-zylinder(SX, SZ - 0.65, 0.22, 1.3, HOSE)
+kugel(SX, SZ - 0.05, 0.28, HOSE, sz=0.8)
+stumpf(SX, SZ - 0.1, 0.26, SZ - 1.2, 0.16, HOSE)
+zylinder(SX, SZ - 1.18, 0.19, 0.14, HOSE, sy=0.8)          # Hosensaum deckt Knie
 anker('schenkel', SX, SZ, SZ - 1.3, 0.5)
 
-# Unterschenkel + Stiefel (Knie → Ferse)
+# ---- Unterschenkel + Stiefel mit Ferse ----
 BX, BZ = 2.6, 0.6
-zylinder(BX, BZ - 0.5, 0.18, 1.0, HOSE)
-zylinder(BX, BZ - 1.05, 0.21, 0.5, STIEFEL)            # Schaft
-quader(BX - 0.14, BZ - 1.32, 0.42, 0.2, 0.14, STIEFEL) # Fußspitze nach vorn (Bild: rechts)
+stumpf(BX, BZ - 0.02, 0.15, BZ - 0.68, 0.12, HOSE)
+stumpf(BX, BZ - 0.62, 0.2, BZ - 1.2, 0.17, STIEFEL)        # Schaft (Saum oben breiter)
+kugel(BX - 0.18, BZ - 1.26, 0.17, STIEFEL, sx=1.5, sz=0.55)  # Fußspitze (Bild: rechts)
+kugel(BX + 0.1, BZ - 1.28, 0.12, STIEFEL, sx=0.9, sz=0.6)    # Ferse
 anker('schienbein', BX, BZ, BZ - 1.3, 0.55)
 
 # ---------- Rendern ----------

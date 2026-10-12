@@ -8,8 +8,8 @@ import { ladeBild } from './bilder.js';
 // Quell-Koordinaten im Blender-Teileblatt (vom Render-Skript exakt berechnet —
 // jedes Teil liegt einzeln auf transparentem Grund, keine Nachbar-Reste)
 const JURO_TEILE = {
-  kopf:       { x: 742, y: 82,  w: 236, h: 184, von: [860, 241], bis: [860, 108] },
-  torso:      { x: 527, y: 200, w: 195, h: 235, von: [625, 246], bis: [625, 389] },
+  kopf:       { x: 737, y: 82,  w: 246, h: 184, von: [860, 241], bis: [860, 108] },
+  torso:      { x: 522, y: 195, w: 205, h: 245, von: [625, 246], bis: [625, 389] },
   oberarm:    { x: 358, y: 179, w: 103, h: 164, von: [410, 205], bis: [410, 317] },
   unterarm:   { x: 230, y: 179, w: 93,  h: 154, von: [276, 205], bis: [276, 307] },
   schenkel:   { x: 358, y: 425, w: 103, h: 184, von: [410, 451], bis: [410, 584] },
