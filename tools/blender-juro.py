@@ -1,22 +1,21 @@
-# Rendert Juros Körperteile als saubere Einzelteile (transparenter Grund)
-# für den Puppen-Renderer. Headless ausführen:
+# Rendert Juro ZUSAMMENGEBAUT in der Spreiz-Pose (für die KI-Übermalung)
+# plus eine MASKE pro Körperteil (gleiche Position, Teil allein) — damit kann
+# das Spiel die bemalten Teile pixelgenau ausstanzen.
 #   blender -b --python tools/blender-juro.py
-# Gibt am Ende die TEILE-Tabelle (Pixel-Koordinaten) für src/puppe.js aus.
 import bpy
 import math
 import json
+import os
 
-# ---------- Szene vorbereiten ----------
+# ---------- Szene ----------
 bpy.ops.wm.read_factory_settings(use_empty=True)
 szene = bpy.context.scene
 szene.render.resolution_x = 1024
 szene.render.resolution_y = 1024
-szene.render.film_transparent = True
 try:
     szene.render.engine = 'BLENDER_EEVEE_NEXT'
 except Exception:
     szene.render.engine = 'BLENDER_EEVEE'
-# Umriss-Linien für den Spiel-Look (Line-Set muss in leerer Szene angelegt werden)
 szene.render.use_freestyle = True
 szene.render.line_thickness = 2.0
 fs = szene.view_layers[0].freestyle_settings
@@ -25,19 +24,17 @@ lineset.select_silhouette = True
 lineset.select_border = True
 lineset.select_crease = True
 
-# Orthokamera: schaut von +Y auf die XZ-Ebene, 10 Welteinheiten breit
-ORTHO = 10.0
-PX_PRO_EINHEIT = 1024 / ORTHO
+ORTHO = 8.0
+PX = 1024 / ORTHO
 kam_daten = bpy.data.cameras.new('Kamera')
 kam_daten.type = 'ORTHO'
 kam_daten.ortho_scale = ORTHO
 kamera = bpy.data.objects.new('Kamera', kam_daten)
-kamera.location = (0, 12, 0)
+kamera.location = (0, 12, 2.4)
 kamera.rotation_euler = (math.radians(90), 0, math.radians(180))
 szene.collection.objects.link(kamera)
 szene.camera = kamera
 
-# Licht: Sonne von vorn-oben-links + Umgebungslicht
 sonne_daten = bpy.data.lights.new('Sonne', type='SUN')
 sonne_daten.energy = 3.5
 sonne = bpy.data.objects.new('Sonne', sonne_daten)
@@ -47,8 +44,12 @@ welt = bpy.data.worlds.new('Welt')
 szene.world = welt
 welt.use_nodes = True
 hintergrund = welt.node_tree.nodes['Background']
-hintergrund.inputs[0].default_value = (0.8, 0.8, 0.85, 1)
-hintergrund.inputs[1].default_value = 0.45
+
+def px(wx):
+    return round(512 - wx * PX)  # Kamera spiegelt X: vorwärts (Bild rechts) = Welt -X
+
+def py(wz):
+    return round(512 - (wz - 2.4) * PX)  # Kamera-Mitte liegt auf z=2.4
 
 # ---------- Materialien ----------
 def material(name, farbe, rauheit=0.85):
@@ -83,18 +84,10 @@ def kugel(x, z, r, mat, sx=1, sy=1, sz=1):
     setze(o, mat)
     return o
 
-def zylinder(x, z, r, laenge, mat, sy=None):
+def zylinder(x, z, r, laenge, mat, sy=0.8):
     bpy.ops.mesh.primitive_cylinder_add(radius=r, depth=laenge, location=(x, 0, z), vertices=24)
     o = bpy.context.object
-    if sy:
-        o.scale[1] = sy
-    setze(o, mat)
-    return o
-
-def quader(x, z, bx, by, bz, mat, y=0):
-    bpy.ops.mesh.primitive_cube_add(size=1, location=(x, y, z))
-    o = bpy.context.object
-    o.scale = (bx, by, bz)
+    o.scale[1] = sy
     setze(o, mat)
     return o
 
@@ -106,89 +99,144 @@ def kegel(x, z, r, laenge, mat, neigung=0.0):
     return o
 
 def stumpf(x, z_oben, r_oben, z_unten, r_unten, mat, sy=0.8):
-    """Konisches Gliedmaßen-Stück: oben dick, zum Gelenk schlank — kein Röhren-Look"""
     mitte = (z_oben + z_unten) / 2
-    laenge = abs(z_oben - z_unten)
-    bpy.ops.mesh.primitive_cone_add(radius1=r_oben, radius2=r_unten, depth=laenge, location=(x, 0, mitte), vertices=24)
+    bpy.ops.mesh.primitive_cone_add(radius1=r_oben, radius2=r_unten, depth=abs(z_oben - z_unten), location=(x, 0, mitte), vertices=24)
     o = bpy.context.object
     o.scale[1] = sy
     setze(o, mat)
     return o
 
-# ---------- Teile bauen (jedes in eigener Zelle, Anker = oben/unten) ----------
-TEILE = {}
+# ---------- Teil-Baukasten: baut am Ursprung (Gelenk oben, zeigt nach unten) ----------
+def sammle(bauen):
+    vorher = set(o.name for o in szene.objects)
+    bauen()
+    neu = [o for o in szene.objects if o.name not in vorher and o.type == 'MESH']
+    for o in neu:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = neu[0]
+    bpy.ops.object.join()
+    obj = bpy.context.object
+    bpy.ops.object.select_all(action='DESELECT')
+    return obj
 
-def anker(name, x, z_oben, z_unten, halbbreite, rand=0.25):
-    def px(wx):
-        return round(512 - wx * PX_PRO_EINHEIT)
-    def py(wz):
-        return round(512 - wz * PX_PRO_EINHEIT)
-    TEILE[name] = {
-        'x': px(x + halbbreite), 'y': py(z_oben + rand),
-        'w': px(x - halbbreite) - px(x + halbbreite),
-        'h': py(z_unten - rand) - py(z_oben + rand),
-        'von': [px(x), py(z_oben)], 'bis': [px(x), py(z_unten)],
-    }
+def baue_kopf():
+    def b():
+        kugel(0, 0.63, 0.5, HAUT, sx=0.95, sz=1.12)
+        kugel(-0.16, 0.33, 0.3, HAUT, sx=1.05, sz=0.8)
+        kugel(0.3, 0.55, 0.09, HAUT, sx=0.5, sz=0.9)
+        kugel(0.12, 0.97, 0.52, HAAR, sx=0.95, sz=0.72)
+        for dx, dz, neig in [(-0.34, 1.27, -0.55), (-0.1, 1.45, -0.2), (0.18, 1.47, 0.25), (0.44, 1.33, 0.65), (0.6, 1.05, 1.0)]:
+            kegel(dx, dz, 0.15, 0.5, HAAR, neigung=neig)
+        zylinder(0, 0.71, 0.52, 0.13, ROT)
+        kugel(0.66, 0.57, 0.09, ROT, sx=2.4, sz=0.4)
+        kugel(0.72, 0.39, 0.07, ROT, sx=2.0, sz=0.35)
+    return sammle(b)
 
-# ---- Kopf: Schädel + Kiefer + Ohr + Haarschopf + Stirnband ----
-KX, KZ = -3.4, 2.6
-kugel(KX, KZ + 0.68, 0.5, HAUT, sx=0.95, sz=1.12)          # Schädel
-kugel(KX - 0.16, KZ + 0.38, 0.3, HAUT, sx=1.05, sz=0.8)    # Kiefer (vorn = Bild rechts)
-kugel(KX + 0.3, KZ + 0.6, 0.09, HAUT, sx=0.5, sz=0.9)      # Ohr
-kugel(KX + 0.12, KZ + 1.02, 0.52, HAAR, sx=0.95, sz=0.72)  # Haarkappe (nach hinten)
-for dx, dz, neig in [(-0.34, 1.32, -0.55), (-0.1, 1.5, -0.2), (0.18, 1.52, 0.25), (0.44, 1.38, 0.65), (0.6, 1.1, 1.0)]:
-    kegel(KX + dx, KZ + dz, 0.15, 0.5, HAAR, neigung=neig)
-zylinder(KX, KZ + 0.76, 0.52, 0.13, ROT, sy=0.8)           # Stirnband
-kugel(KX + 0.66, KZ + 0.62, 0.09, ROT, sx=2.4, sz=0.4)     # Band-Enden wehen nach hinten
-kugel(KX + 0.72, KZ + 0.44, 0.07, ROT, sx=2.0, sz=0.35)
-anker('kopf', KX, KZ + 1.35, KZ + 0.05, 1.2)
-TEILE['kopf']['von'], TEILE['kopf']['bis'] = TEILE['kopf']['bis'], TEILE['kopf']['von']
+def baue_torso():
+    def b():
+        kugel(0, -0.25, 0.56, JACKE, sy=0.55, sz=0.85)
+        stumpf(0, -0.7, 0.44, -1.32, 0.34, JACKE, sy=0.55)
+        zylinder(0, -1.36, 0.4, 0.16, ROT, sy=0.6)
+        stumpf(0, -1.4, 0.42, -2.2, 0.58, MANTEL, sy=0.5)
+        kugel(-0.05, -2.22, 0.56, MANTEL, sy=0.48, sz=0.22)
+        kugel(0, 0.12, 0.36, ROT, sx=1.25, sy=0.8, sz=0.5)
+        kugel(-0.3, 0.2, 0.16, ROT, sx=0.8, sz=1.4)
+    return sammle(b)
 
-# ---- Torso: geformte Brust, Taille, Mantel mit schrägem Saum, Schal, Schulterkappe ----
-TX, TZ = -1.1, 2.9
-kugel(TX, TZ - 0.55, 0.56, JACKE, sx=1.0, sy=0.55, sz=0.85)   # Brustkorb (geformt)
-stumpf(TX, TZ - 1.0, 0.44, TZ - 1.62, 0.34, JACKE, sy=0.55)   # Taille (verjüngt)
-zylinder(TX, TZ - 1.66, 0.4, 0.16, ROT, sy=0.6)               # Gürtel
-stumpf(TX, TZ - 1.7, 0.42, TZ - 2.5, 0.58, MANTEL, sy=0.5)    # Mantel flared
-k = kugel(TX - 0.05, TZ - 2.52, 0.56, MANTEL, sx=1.0, sy=0.48, sz=0.22)  # Saum-Schwung
-kugel(TX, TZ - 0.18, 0.36, ROT, sx=1.25, sy=0.8, sz=0.5)      # Schal
-kugel(TX - 0.3, TZ - 0.1, 0.16, ROT, sx=0.8, sz=1.4)          # Schal-Knoten vorn
-anker('torso', TX, TZ - 0.3, TZ - 1.7, 1.0, rand=0.5)
+def baue_oberarm():
+    def b():
+        kugel(0, -0.08, 0.3, JACKE, sz=0.85)
+        stumpf(0, -0.15, 0.24, -1.05, 0.15, JACKE)
+        zylinder(0, -1.02, 0.18, 0.14, MANTEL)
+    return sammle(b)
 
-# ---- Oberarm: Schulterkappe + konischer Ärmel + Ellbogenbund ----
-AX, AZ = 1.0, 3.0
-kugel(AX, AZ - 0.08, 0.3, JACKE, sz=0.85)                 # Schulterkappe (deckt Ansatz)
-stumpf(AX, AZ - 0.15, 0.24, AZ - 1.05, 0.15, JACKE)       # Ärmel konisch
-zylinder(AX, AZ - 1.02, 0.18, 0.14, MANTEL, sy=0.8)       # Ärmelbund (deckt Ellbogen)
-anker('oberarm', AX, AZ, AZ - 1.1, 0.5)
+def baue_unterarm():
+    def b():
+        stumpf(0, -0.02, 0.17, -0.78, 0.12, JACKE)
+        stumpf(0, -0.42, 0.2, -0.8, 0.16, BRAUN)
+        kugel(0, -0.98, 0.18, HAUT, sz=1.1)
+        kugel(-0.14, -0.92, 0.08, HAUT)
+    return sammle(b)
 
-# ---- Unterarm: konisch + Armschiene + Faust mit Daumen ----
-UX, UZ = 2.3, 3.0
-stumpf(UX, UZ - 0.02, 0.17, UZ - 0.78, 0.12, JACKE)
-stumpf(UX, UZ - 0.42, 0.2, UZ - 0.8, 0.16, BRAUN)          # Armschiene
-kugel(UX, UZ - 0.98, 0.18, HAUT, sz=1.1)                   # Faust
-kugel(UX - 0.14, UZ - 0.92, 0.08, HAUT)                    # Daumen
-anker('unterarm', UX, UZ, UZ - 1.0, 0.45)
+def baue_schenkel():
+    def b():
+        kugel(0, -0.05, 0.28, HOSE, sz=0.8)
+        stumpf(0, -0.1, 0.26, -1.2, 0.16, HOSE)
+        zylinder(0, -1.18, 0.19, 0.14, HOSE)
+    return sammle(b)
 
-# ---- Oberschenkel: konisch, Kniebund ----
-SX, SZ = 1.0, 0.6
-kugel(SX, SZ - 0.05, 0.28, HOSE, sz=0.8)
-stumpf(SX, SZ - 0.1, 0.26, SZ - 1.2, 0.16, HOSE)
-zylinder(SX, SZ - 1.18, 0.19, 0.14, HOSE, sy=0.8)          # Hosensaum deckt Knie
-anker('schenkel', SX, SZ, SZ - 1.3, 0.5)
+def baue_schienbein():
+    def b():
+        stumpf(0, -0.02, 0.15, -0.68, 0.12, HOSE)
+        stumpf(0, -0.62, 0.2, -1.2, 0.17, STIEFEL)
+        kugel(-0.18, -1.26, 0.17, STIEFEL, sx=1.5, sz=0.55)
+        kugel(0.1, -1.28, 0.12, STIEFEL, sx=0.9, sz=0.6)
+    return sammle(b)
 
-# ---- Unterschenkel + Stiefel mit Ferse ----
-BX, BZ = 2.6, 0.6
-stumpf(BX, BZ - 0.02, 0.15, BZ - 0.68, 0.12, HOSE)
-stumpf(BX, BZ - 0.62, 0.2, BZ - 1.2, 0.17, STIEFEL)        # Schaft (Saum oben breiter)
-kugel(BX - 0.18, BZ - 1.26, 0.17, STIEFEL, sx=1.5, sz=0.55)  # Fußspitze (Bild: rechts)
-kugel(BX + 0.1, BZ - 1.28, 0.12, STIEFEL, sx=0.9, sz=0.6)    # Ferse
-anker('schienbein', BX, BZ, BZ - 1.3, 0.55)
+# ---------- Figur montieren (Spreiz-Pose; vorwärts = Welt -X = Bild rechts) ----------
+def grad(w):
+    return math.radians(w)
 
-# ---------- Rendern ----------
-import os
-ziel = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'assets', 'teile', 'juro-blender.png')
-szene.render.filepath = ziel
+SCHULTER = (0.3, 3.4)
+HUEFTE = (0.3, 2.0)
+HALS = (0.3, 3.52)
+L_OBERARM, L_UNTERARM, L_SCHENKEL, L_SCHIENBEIN = 1.1, 1.0, 1.3, 1.3
+
+def kind(gelenk, winkel, laenge):
+    return (gelenk[0] - math.sin(grad(winkel)) * laenge, gelenk[1] - math.cos(grad(winkel)) * laenge)
+
+ELLE = kind(SCHULTER, 45, L_OBERARM)
+HAND = kind(ELLE, 45, L_UNTERARM)
+KNIE_V = kind(HUEFTE, 24, L_SCHENKEL)
+FUSS_V = kind(KNIE_V, 28, L_SCHIENBEIN)
+KNIE_H = kind(HUEFTE, -24, L_SCHENKEL)
+FUSS_H = kind(KNIE_H, -28, L_SCHIENBEIN)
+SCHEITEL = (HALS[0], HALS[1] + 1.33)
+
+def platziere(obj, gelenk, winkel):
+    obj.location = (gelenk[0], 0, gelenk[1])
+    obj.rotation_euler[1] = grad(winkel)
+
+teile = {}
+teile['beinH_O'] = baue_schenkel();   platziere(teile['beinH_O'], HUEFTE, -24)
+teile['beinH_U'] = baue_schienbein(); platziere(teile['beinH_U'], KNIE_H, -28)
+teile['beinV_O'] = baue_schenkel();   platziere(teile['beinV_O'], HUEFTE, 24)
+teile['beinV_U'] = baue_schienbein(); platziere(teile['beinV_U'], KNIE_V, 28)
+teile['torso'] = baue_torso();        platziere(teile['torso'], SCHULTER, 0)
+teile['kopf'] = baue_kopf();          platziere(teile['kopf'], HALS, 0)
+teile['armO'] = baue_oberarm();       platziere(teile['armO'], SCHULTER, 45)
+teile['armU'] = baue_unterarm();      platziere(teile['armU'], ELLE, 45)
+
+# ---------- Rendern: 1× Figur (weiß) + 1 Maske pro Teil (transparent) ----------
+basis = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'assets', 'teile', 'juro')
+os.makedirs(basis, exist_ok=True)
+
+szene.render.film_transparent = False
+hintergrund.inputs[0].default_value = (1, 1, 1, 1)
+hintergrund.inputs[1].default_value = 1.0
+szene.render.filepath = os.path.join(basis, 'koerper.png')
 bpy.ops.render.render(write_still=True)
-print('GERENDERT:', ziel)
-print('TEILE_JSON=' + json.dumps(TEILE))
+print('GERENDERT:', szene.render.filepath)
+
+szene.render.film_transparent = True
+szene.render.use_freestyle = False  # Masken brauchen keine Linien
+for name, obj in teile.items():
+    for n2, o2 in teile.items():
+        o2.hide_render = (n2 != name)
+    szene.render.filepath = os.path.join(basis, f'maske-{name}.png')
+    bpy.ops.render.render(write_still=True)
+    print('MASKE:', name)
+
+GELENKE = {
+    'schulter': [px(SCHULTER[0]), py(SCHULTER[1])],
+    'huefte': [px(HUEFTE[0]), py(HUEFTE[1])],
+    'hals': [px(HALS[0]), py(HALS[1])],
+    'scheitel': [px(SCHEITEL[0]), py(SCHEITEL[1])],
+    'elle': [px(ELLE[0]), py(ELLE[1])],
+    'hand': [px(HAND[0]), py(HAND[1])],
+    'knieV': [px(KNIE_V[0]), py(KNIE_V[1])],
+    'fussV': [px(FUSS_V[0]), py(FUSS_V[1])],
+    'knieH': [px(KNIE_H[0]), py(KNIE_H[1])],
+    'fussH': [px(FUSS_H[0]), py(FUSS_H[1])],
+}
+print('GELENKE_JSON=' + json.dumps(GELENKE))
