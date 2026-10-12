@@ -9,9 +9,9 @@ import { ladeBild } from './bilder.js';
 
 // Gelenk-Pixel im 1024er-Render (vom Blender-Skript exakt ausgegeben)
 const GELENKE = {
-  schulter: [474, 384], huefte: [474, 563], hals: [474, 369], scheitel: [474, 198],
-  elle: [573, 484], hand: [664, 574],
-  knieV: [541, 715], fussV: [619, 862], knieH: [406, 715], fussH: [328, 862],
+  schulter: [474, 302], huefte: [474, 494], hals: [474, 287], scheitel: [474, 191],
+  elle: [567, 380], hand: [672, 408],
+  knieV: [552, 669], fussV: [639, 833], knieH: [396, 669], fussH: [308, 833],
 };
 
 // Teil → [von-Gelenk, bis-Gelenk]
@@ -114,14 +114,14 @@ export function zeichnePuppe(ctx, x, fussY, blick, pose, _puppe, skalierung = 1)
   const schulter = ende(huefte, pose.rumpf, s.rumpfLaenge, true);
   const kopfMitte = ende(schulter, pose.rumpf + pose.kopf, s.halsLaenge + s.kopfRadius, true);
   // Kopf-Anker exakt aus den Blender-Proportionen abgeleitet:
-  // Torso = 1.4 Blender-Einheiten ↔ rumpfLaenge Pixel; Hals sitzt 0.12 u über
-  // der Schulter, der Scheitel 1.33 u über dem Hals — so sitzt der Kopf passgenau.
-  const einheit = (s.rumpfLaenge / 1.4) * sk;
+  // Torso = 1.5 Blender-Einheiten ↔ rumpfLaenge Pixel; Hals sitzt 0.12 u über
+  // der Schulter, der Scheitel 0.75 u über dem Hals (7-Kopf-Proportionen).
+  const einheit = (s.rumpfLaenge / 1.5) * sk;
   const dLen = Math.hypot(kopfMitte[0] - schulter[0], kopfMitte[1] - schulter[1]) || 1;
   const rx = (kopfMitte[0] - schulter[0]) / dLen;
   const ry = (kopfMitte[1] - schulter[1]) / dLen;
   const hals = [schulter[0] + rx * 0.12 * einheit, schulter[1] + ry * 0.12 * einheit];
-  const scheitel = [hals[0] + rx * 1.33 * einheit, hals[1] + ry * 1.33 * einheit];
+  const scheitel = [hals[0] + rx * 0.75 * einheit, hals[1] + ry * 0.75 * einheit];
   const elleV = ende(schulter, pose.vSchulter, s.oberarm);
   const handV = ende(elleV, pose.vSchulter + pose.vEllbogen, s.unterarm);
   const elleH = ende(schulter, pose.hSchulter, s.oberarm);

@@ -30,7 +30,7 @@ kam_daten = bpy.data.cameras.new('Kamera')
 kam_daten.type = 'ORTHO'
 kam_daten.ortho_scale = ORTHO
 kamera = bpy.data.objects.new('Kamera', kam_daten)
-kamera.location = (0, 12, 2.4)
+kamera.location = (0, 12, 2.76)
 kamera.rotation_euler = (math.radians(90), 0, math.radians(180))
 szene.collection.objects.link(kamera)
 szene.camera = kamera
@@ -49,7 +49,7 @@ def px(wx):
     return round(512 - wx * PX)  # Kamera spiegelt X: vorwärts (Bild rechts) = Welt -X
 
 def py(wz):
-    return round(512 - (wz - 2.4) * PX)  # Kamera-Mitte liegt auf z=2.4
+    return round(512 - (wz - 2.76) * PX)  # Kamera-Mitte
 
 # ---------- Materialien ----------
 def material(name, farbe, rauheit=0.85):
@@ -134,77 +134,77 @@ def sammle(bauen):
 
 def baue_kopf():
     def b():
-        kugel(0, 0.6, 0.5, SCHWARZ, sx=0.95, sz=1.05)        # Kapuze
-        kugel(0.32, 0.85, 0.3, SCHWARZ, sx=1.3, sz=0.8)      # Kapuzen-Falte hinten
-        kugel(-0.18, 0.4, 0.33, KOHLE, sx=0.95, sz=0.72)     # Gesichtsmaske unten
-        quader(-0.4, 0.62, 0.12, 0.28, 0.045, ROTGLUT)       # glühender Augenschlitz
+        kugel(0, 0.38, 0.3, SCHWARZ, sx=0.95, sz=1.1)        # Kapuze
+        kugel(0.2, 0.52, 0.18, SCHWARZ, sx=1.3, sz=0.8)      # Kapuzen-Falte hinten
+        kugel(-0.11, 0.24, 0.2, KOHLE, sx=0.95, sz=0.72)     # Gesichtsmaske
+        quader(-0.25, 0.4, 0.08, 0.18, 0.03, ROTGLUT)        # glühender Augenschlitz
     return sammle(b)
 
 def baue_torso():
     def b():
-        kugel(0, -0.25, 0.56, SCHWARZ, sy=0.55, sz=0.85)      # Brust
-        quader(-0.38, -0.45, 0.14, 0.28, 0.32, KOHLE)         # Brustplatte vorn
-        stumpf(0, -0.7, 0.44, -1.32, 0.34, SCHWARZ, sy=0.55)  # Taille
-        zylinder(0, -1.36, 0.4, 0.16, GRAU, sy=0.6)           # Gürtel
-        quader(-0.3, -1.52, 0.14, 0.2, 0.12, KOHLE)           # Tasche vorn
-        quader(0.3, -1.52, 0.14, 0.2, 0.12, KOHLE)            # Tasche hinten
-        stumpf(0, -1.44, 0.4, -2.1, 0.5, KOHLE, sy=0.5)       # Rock-Schöße
-        kugel(0, 0.08, 0.38, WEINROT, sx=1.3, sy=0.85, sz=0.5)  # Schal
-        kugel(0.55, -0.35, 0.12, WEINROT, sx=2.4, sz=0.5)     # Schal-Ende weht
-        kugel(0.62, -0.85, 0.1, WEINROT, sx=2.0, sz=0.45)     # zweites Ende
+        kugel(0, -0.28, 0.5, SCHWARZ, sy=0.55, sz=0.8)        # Brust
+        quader(-0.34, -0.5, 0.12, 0.26, 0.3, KOHLE)           # Brustplatte vorn
+        stumpf(0, -0.75, 0.38, -1.42, 0.3, SCHWARZ, sy=0.55)  # Taille
+        zylinder(0, -1.46, 0.36, 0.14, GRAU, sy=0.6)          # Gürtel
+        quader(-0.26, -1.6, 0.12, 0.18, 0.1, KOHLE)           # Tasche vorn
+        quader(0.26, -1.6, 0.12, 0.18, 0.1, KOHLE)            # Tasche hinten
+        stumpf(0, -1.52, 0.36, -2.15, 0.44, KOHLE, sy=0.5)    # Rock-Schöße
+        kugel(0, 0.04, 0.33, WEINROT, sx=1.3, sy=0.85, sz=0.45)  # Schal
+        kugel(0.5, -0.35, 0.1, WEINROT, sx=2.4, sz=0.5)       # Schal-Ende weht
+        kugel(0.56, -0.8, 0.09, WEINROT, sx=2.0, sz=0.45)
     return sammle(b)
 
 def baue_oberarm():
     def b():
-        kugel(0, -0.08, 0.3, KOHLE, sz=0.8)                   # Schulterplatte
-        quader(-0.2, -0.12, 0.08, 0.2, 0.1, ROTGLUT)          # rote Markierung
-        stumpf(0, -0.18, 0.23, -1.05, 0.15, SCHWARZ)
-        zylinder(0, -1.02, 0.18, 0.14, KOHLE)
+        kugel(0, -0.06, 0.26, KOHLE, sz=0.8)                  # Schulterplatte
+        quader(-0.17, -0.1, 0.07, 0.18, 0.09, ROTGLUT)        # rote Markierung
+        stumpf(0, -0.14, 0.2, -0.9, 0.13, SCHWARZ)
+        zylinder(0, -0.88, 0.16, 0.12, KOHLE)
     return sammle(b)
 
 def baue_unterarm():
     def b():
-        stumpf(0, -0.02, 0.17, -0.78, 0.12, SCHWARZ)
-        stumpf(0, -0.38, 0.19, -0.78, 0.15, KOHLE)            # Armschiene
-        kugel(0, -0.97, 0.17, KOHLE, sz=1.1)                  # Handschuh-Faust
-        kugel(-0.13, -0.9, 0.075, KOHLE)
+        stumpf(0, -0.02, 0.15, -0.66, 0.11, SCHWARZ)
+        stumpf(0, -0.32, 0.17, -0.66, 0.13, KOHLE)            # Armschiene
+        kugel(0, -0.8, 0.15, KOHLE, sz=1.1)                   # Handschuh-Faust
+        kugel(-0.11, -0.74, 0.065, KOHLE)
     return sammle(b)
 
 def baue_schenkel():
     def b():
-        kugel(0, -0.05, 0.28, SCHWARZ, sz=0.8)
-        stumpf(0, -0.1, 0.26, -1.2, 0.16, SCHWARZ)
-        zylinder(0, -1.18, 0.19, 0.14, KOHLE)
+        kugel(0, -0.05, 0.26, SCHWARZ, sz=0.8)
+        stumpf(0, -0.1, 0.24, -1.4, 0.15, SCHWARZ)
+        zylinder(0, -1.38, 0.18, 0.12, KOHLE)
     return sammle(b)
 
 def baue_schienbein():
     def b():
-        stumpf(0, -0.02, 0.15, -0.5, 0.13, SCHWARZ)
-        for i, zz in enumerate([-0.5, -0.68, -0.86, -1.04]):   # Bandagen-Wicklung
-            zylinder(0, zz, 0.16 - i * 0.008, 0.15, GRAU)
-        kugel(-0.16, -1.26, 0.17, SCHWARZ, sx=1.5, sz=0.55)    # Tabi-Spitze
-        kugel(0.1, -1.27, 0.12, SCHWARZ, sx=0.9, sz=0.6)       # Ferse
+        stumpf(0, -0.02, 0.14, -0.6, 0.12, SCHWARZ)
+        for i, zz in enumerate([-0.6, -0.78, -0.96, -1.14]):   # Bandagen
+            zylinder(0, zz, 0.15 - i * 0.007, 0.15, GRAU)
+        kugel(-0.15, -1.4, 0.16, SCHWARZ, sx=1.5, sz=0.55)     # Tabi-Spitze
+        kugel(0.09, -1.41, 0.11, SCHWARZ, sx=0.9, sz=0.6)      # Ferse
     return sammle(b)
 
 # ---------- Figur montieren (Spreiz-Pose; vorwärts = Welt -X = Bild rechts) ----------
 def grad(w):
     return math.radians(w)
 
-SCHULTER = (0.3, 3.4)
-HUEFTE = (0.3, 2.0)
-HALS = (0.3, 3.52)
-L_OBERARM, L_UNTERARM, L_SCHENKEL, L_SCHIENBEIN = 1.1, 1.0, 1.3, 1.3
+SCHULTER = (0.3, 4.4)
+HUEFTE = (0.3, 2.9)
+HALS = (0.3, 4.52)
+L_OBERARM, L_UNTERARM, L_SCHENKEL, L_SCHIENBEIN = 0.95, 0.85, 1.5, 1.45
 
 def kind(gelenk, winkel, laenge):
     return (gelenk[0] - math.sin(grad(winkel)) * laenge, gelenk[1] - math.cos(grad(winkel)) * laenge)
 
-ELLE = kind(SCHULTER, 45, L_OBERARM)
-HAND = kind(ELLE, 45, L_UNTERARM)
+ELLE = kind(SCHULTER, 50, L_OBERARM)
+HAND = kind(ELLE, 75, L_UNTERARM)  # Ellbogen leicht gebeugt — natürliche Haltung
 KNIE_V = kind(HUEFTE, 24, L_SCHENKEL)
 FUSS_V = kind(KNIE_V, 28, L_SCHIENBEIN)
 KNIE_H = kind(HUEFTE, -24, L_SCHENKEL)
 FUSS_H = kind(KNIE_H, -28, L_SCHIENBEIN)
-SCHEITEL = (HALS[0], HALS[1] + 1.33)
+SCHEITEL = (HALS[0], HALS[1] + 0.75)
 
 def platziere(obj, gelenk, winkel):
     obj.location = (gelenk[0], 0, gelenk[1])
@@ -217,8 +217,8 @@ teile['beinV_O'] = baue_schenkel();   platziere(teile['beinV_O'], HUEFTE, 24)
 teile['beinV_U'] = baue_schienbein(); platziere(teile['beinV_U'], KNIE_V, 28)
 teile['torso'] = baue_torso();        platziere(teile['torso'], SCHULTER, 0)
 teile['kopf'] = baue_kopf();          platziere(teile['kopf'], HALS, 0)
-teile['armO'] = baue_oberarm();       platziere(teile['armO'], SCHULTER, 45)
-teile['armU'] = baue_unterarm();      platziere(teile['armU'], ELLE, 45)
+teile['armO'] = baue_oberarm();       platziere(teile['armO'], SCHULTER, 50)
+teile['armU'] = baue_unterarm();      platziere(teile['armU'], ELLE, 75)
 
 # ---------- Rendern: 1× Figur (weiß) + 1 Maske pro Teil (transparent) ----------
 basis = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'assets', 'teile', 'juro')
